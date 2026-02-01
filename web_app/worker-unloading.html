@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Unloading - Scan Materials</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-right: 15px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .progress-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            z-index: 1;
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid #e0e0e0;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .step.completed .step-circle {
+            border-color: #28a745;
+            background: #28a745;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .farmer-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .farmer-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .farmer-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .scan-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .status-pending {
+            background: #e0e0e0;
+        }
+
+        .status-done {
+            background: #28a745;
+            color: white;
+        }
+
+        #qrReader {
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .scanned-item {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #28a745;
+        }
+
+        .scanned-item h4 {
+            color: #1b5e20;
+            margin-bottom: 5px;
+        }
+
+        .scanned-item p {
+            color: #2e7d32;
+            margin: 5px 0;
+        }
+
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .photo-item {
+            position: relative;
+            padding-top: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .photo-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='home.html'">←</button>
+        <h1>📦 Material Unloading</h1>
+    </div>
+
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-steps">
+                <div class="progress-line" id="progressLine" style="width: 0%"></div>
+                <div class="step active" id="step1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Select Farmer</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Scan Items</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Review</div>
+                </div>
+                <div class="step" id="step4">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Submit</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Select Farmer -->
+        <div class="card" id="selectFarmerStep">
+            <h2>Select Farmer</h2>
+            <select id="farmerSelect" onchange="loadFarmerDetails()">
+                <option value="">Loading farmers...</option>
+            </select>
+            <div id="farmerInfo" class="hidden"></div>
+            <button class="btn btn-primary" id="startScanBtn" onclick="startScanning()" disabled>
+                Start Scanning Materials
+            </button>
+        </div>
+
+        <!-- Step 2: Scan Materials -->
+        <div class="card hidden" id="scanMaterialsStep">
+            <div id="farmerInfoHeader" class="farmer-info"></div>
+
+            <!-- Controller -->
+            <div class="scan-section" id="controllerSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="controllerStatus">1</span>
+                    <span>Controller</span>
+                </div>
+                <div id="qrReaderController" class="hidden"></div>
+                <button class="btn btn-secondary" onclick="scanQR('controller')">📷 Scan Controller QR</button>
+                <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('controller')">
+                <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
+                    onclick="document.getElementById('controllerPhoto').click()">
+                    📸 Take Controller Photo
+                </button>
+                <div id="controllerScanned" class="hidden"></div>
+            </div>
+
+            <!-- Pump -->
+            <div class="scan-section hidden" id="pumpSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="pumpStatus">2</span>
+                    <span>Pump</span>
+                </div>
+                <div id="qrReaderPump" class="hidden"></div>
+                <button class="btn btn-secondary" onclick="scanQR('pump')">📷 Scan Pump QR</button>
+                <select id="pumpHP" class="hidden">
+                    <option value="">Select HP...</option>
+                    <option value="1">1 HP</option>
+                    <option value="2">2 HP</option>
+                    <option value="3">3 HP</option>
+                    <option value="5">5 HP</option>
+                    <option value="7.5">7.5 HP</option>
+                    <option value="10">10 HP</option>
+                </select>
+                <input type="file" id="pumpPhoto" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('pump')">
+                <button class="btn btn-secondary hidden" id="pumpPhotoBtn"
+                    onclick="document.getElementById('pumpPhoto').click()">
+                    📸 Take Pump Photo
+                </button>
+                <div id="pumpScanned" class="hidden"></div>
+            </div>
+
+            <!-- Panels -->
+            <div class="scan-section hidden" id="panelsSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="panelsStatus">3</span>
+                    <span>Solar Panels</span>
+                </div>
+                <div id="qrReaderPanels" class="hidden"></div>
+                <button class="btn btn-secondary" onclick="scanQR('panels')">📷 Scan Panel QR</button>
+                <select id="panelType" class="hidden">
+                    <option value="">Select Panel Type...</option>
+                    <option value="Poly 335W">Polycrystalline 335W</option>
+                    <option value="Poly 350W">Polycrystalline 350W</option>
+                    <option value="Mono 400W">Monocrystalline 400W</option>
+                    <option value="Mono 450W">Monocrystalline 450W</option>
+                </select>
+                <input type="file" id="panelsPhoto" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('panels')">
+                <button class="btn btn-secondary hidden" id="panelsPhotoBtn"
+                    onclick="document.getElementById('panelsPhoto').click()">
+                    📸 Take Panels Photo
+                </button>
+                <div id="panelsScanned" class="hidden"></div>
+            </div>
+
+            <!-- Issues -->
+            <div class="scan-section hidden" id="issuesSection">
+                <h3>Any Issues?</h3>
+                <input type="file" id="issuePhoto" accept="image/*" capture="environment" multiple
+                    onchange="handleIssuePhotos()">
+                <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
+                    📸 Add Issue Photos (Optional)
+                </button>
+                <div id="issuePhotos" class="photo-preview"></div>
+            </div>
+
+            <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
+                Review & Submit
+            </button>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div class="card hidden" id="reviewStep">
+            <h2>Review Scanned Items</h2>
+            <div id="reviewContent"></div>
+            <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()">
+                ✓ Confirm & Upload
+            </button>
+            <button class="btn btn-secondary" onclick="goBack()">
+                ← Go Back to Edit
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
+            authDomain: "gen-lang-client-0579320558.firebaseapp.com",
+            projectId: "gen-lang-client-0579320558",
+            storageBucket: "gen-lang-client-0579320558.firebasestorage.app",
+            messagingSenderId: "770401014858",
+            appId: "1:770401014858:web:placeholder"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let currentUser = null;
+        let selectedFarmer = null;
+        let scannedData = {
+            controller: { qr: '', photo: null },
+            pump: { qr: '', hp: '', photo: null },
+            panels: { qr: '', type: '', photo: null },
+            issues: []
+        };
+        let html5QrCode = null;
+        let currentScanning = null;
+
+        // Check auth
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                loadFarmers();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        async function loadFarmers() {
+            const select = document.getElementById('farmerSelect');
+            try {
+                const snapshot = await getDocs(collection(db, 'farmers_master'));
+                select.innerHTML = '<option value="">Select farmer...</option>';
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.unloading_status === 'pending' || data.unloading_status === 'in_progress') {
+                        const option = document.createElement('option');
+                        option.value = doc.id;
+                        option.textContent = `${data.name} - ${data.location} (${data.hp} HP)`;
+                        option.dataset.farmer = JSON.stringify({ id: doc.id, ...data });
+                        select.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading farmers:', error);
+                select.innerHTML = '<option value="">Error loading farmers</option>';
+            }
+        }
+
+        window.loadFarmerDetails = () => {
+            const select = document.getElementById('farmerSelect');
+            if (!select.value) return;
+
+            const option = select.options[select.selectedIndex];
+            selectedFarmer = JSON.parse(option.dataset.farmer);
+
+            const infoDiv = document.getElementById('farmerInfo');
+            infoDiv.className = 'farmer-info';
+            infoDiv.innerHTML = `
+                <div class="farmer-name">${selectedFarmer.name}</div>
+                <div class="farmer-details">
+                    <div class="detail-item">📍 ${selectedFarmer.location}</div>
+                    <div class="detail-item">☎️ ${selectedFarmer.phone}</div>
+                    <div class="detail-item">⚡ ${selectedFarmer.hp} HP</div>
+                </div>
+            `;
+
+            document.getElementById('startScanBtn').disabled = false;
+        };
+
+        window.startScanning = () => {
+            document.getElementById('selectFarmerStep').classList.add('hidden');
+            document.getElementById('scanMaterialsStep').classList.remove('hidden');
+
+            // Show farmer info in header
+            document.getElementById('farmerInfoHeader').innerHTML = `
+                <div class="farmer-name">${selectedFarmer.name}</div>
+                <div class="farmer-details">
+                    <div class="detail-item">📍 ${selectedFarmer.location}</div>
+                    <div class="detail-item">⚡ ${selectedFarmer.hp} HP</div>
+                </div>
+            `;
+
+            updateProgress(2);
+        };
+
+        window.scanQR = async (type) => {
+            currentScanning = type;
+            const readerDiv = document.getElementById(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            readerDiv.classList.remove('hidden');
+
+            html5 QrCode = new Html5Qrcode(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
+
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        html5QrCode.stop();
+                        readerDiv.classList.add('hidden');
+                        handleQRScanned(type, decodedText);
+                    }
+                );
+            } catch (err) {
+                console.error('QR Scanner error:', err);
+                // Fallback: manual entry
+                const qr = prompt(`Enter ${type} QR code manually:`);
+                if (qr) handleQRScanned(type, qr);
+            }
+        };
+
+        window.handleQRScanned = (type, qrCode) => {
+            scannedData[type].qr = qrCode;
+
+            // Show HP/Type selector and photo button
+            if (type === 'pump') {
+                document.getElementById('pumpHP').classList.remove('hidden');
+            } else if (type === 'panels') {
+                document.getElementById('panelType').classList.remove('hidden');
+            }
+
+            document.getElementById(`${type}PhotoBtn`).classList.remove('hidden');
+        };
+
+        window.handlePhoto = async (type) => {
+            const input = document.getElementById(`${type}Photo`);
+            const file = input.files[0];
+            if (!file) return;
+
+            scannedData[type].photo = file;
+
+            // Get HP/Type if needed
+            if (type === 'pump') {
+                scannedData.pump.hp = document.getElementById('pumpHP').value;
+            } else if (type === 'panels') {
+                scannedData.panels.type = document.getElementById('panelType').value;
+            }
+
+            // Show scanned confirmation
+            const scannedDiv = document.getElementById(`${type}Scanned`);
+            scannedDiv.className = 'scanned-item';
+            scannedDiv.innerHTML = `
+                <h4>✓ ${type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
+                <p>QR: ${scannedData[type].qr}</p>
+                ${scannedData[type].hp ? `<p>HP: ${scannedData[type].hp}</p>` : ''}
+                ${scannedData[type].type ? `<p>Type: ${scannedData[type].type}</p>` : ''}
+                <p>✓ Photo captured</p>
+            `;
+
+            document.getElementById(`${type}Status`).className = 'status-icon status-done';
+
+            // Show next section
+            if (type === 'controller') {
+                document.getElementById('pumpSection').classList.remove('hidden');
+            } else if (type === 'pump') {
+                document.getElementById('panelsSection').classList.remove('hidden');
+            } else if (type === 'panels') {
+                document.getElementById('issuesSection').classList.remove('hidden');
+                document.getElementById('reviewBtn').classList.remove('hidden');
+            }
+        };
+
+        window.handleIssuePhotos = () => {
+            const input = document.getElementById('issuePhoto');
+            scannedData.issues = Array.from(input.files);
+
+            const preview = document.getElementById('issuePhotos');
+            preview.innerHTML = '';
+            scannedData.issues.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'photo-item';
+                    div.innerHTML = `<img src="${e.target.result}">`;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        window.showReview = () => {
+            document.getElementById('scanMaterialsStep').classList.add('hidden');
+            document.getElementById('reviewStep').classList.remove('hidden');
+
+            const content = document.getElementById('reviewContent');
+            content.innerHTML = `
+                <div class="farmer-info">
+                    <div class="farmer-name">${selectedFarmer.name}</div>
+                    <div class="farmer-details">
+                        <div>📍 ${selectedFarmer.location}</div>
+                        <div>⚡ ${selectedFarmer.hp} HP</div>
+                    </div>
+                </div>
+
+                <div class="scanned-item">
+                    <h4>Controller</h4>
+                    <p>QR: ${scannedData.controller.qr}</p>
+                    <p>✓ Photo captured</p>
+                </div>
+
+                <div class="scanned-item">
+                    <h4>Pump</h4>
+                    <p>QR: ${scannedData.pump.qr}</p>
+                    <p>HP: ${scannedData.pump.hp}</p>
+                    <p>✓ Photo captured</p>
+                </div>
+
+                <div class="scanned-item">
+                    <h4>Solar Panels</h4>
+                    <p>QR: ${scannedData.panels.qr}</p>
+                    <p>Type: ${scannedData.panels.type}</p>
+                    <p>✓ Photo captured</p>
+                </div>
+
+                ${scannedData.issues.length > 0 ? `
+                    <div class="scanned-item">
+                        <h4>Issues Reported</h4>
+                        <p>${scannedData.issues.length} photos attached</p>
+                    </div>
+                ` : ''}
+            `;
+
+            updateProgress(3);
+        };
+
+        window.submitUnloading = async () => {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+
+            try {
+                // Upload photos
+                const controllerPhotoUrl = await uploadPhoto(scannedData.controller.photo, 'controller');
+                const pumpPhotoUrl = await uploadPhoto(scannedData.pump.photo, 'pump');
+                const panelsPhotoUrl = await uploadPhoto(scannedData.panels.photo, 'panels');
+
+                const issuePhotoUrls = [];
+                for (const photo of scannedData.issues) {
+                    const url = await uploadPhoto(photo, 'issues');
+                    issuePhotoUrls.push(url);
+                }
+
+                // Save to Firestore
+                await addDoc(collection(db, 'unloading_records'), {
+                    farmer_id: selectedFarmer.id,
+                    farmer_name: selectedFarmer.name,
+                    controller_qr: scannedData.controller.qr,
+                    controller_photo: controllerPhotoUrl,
+                    pump_qr: scannedData.pump.qr,
+                    pump_hp: scannedData.pump.hp,
+                    pump_photo: pumpPhotoUrl,
+                    panels_qr: scannedData.panels.qr,
+                    panels_type: scannedData.panels.type,
+                    panels_photo: panelsPhotoUrl,
+                    issue_photos: issuePhotoUrls,
+                    worker_email: currentUser.email,
+                    timestamp: serverTimestamp()
+                });
+
+                // Update farmer status
+                await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {
+                    unloading_status: 'done',
+                    updatedAt: serverTimestamp()
+                });
+
+                updateProgress(4);
+                alert('✓ Unloading completed successfully!');
+                window.location.href = 'home.html';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error uploading: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✓ Confirm & Upload';
+            }
+        };
+
+        async function uploadPhoto(file, folder) {
+            if (!file) return null;
+            const storageRef = ref(storage, `unloading/${folder}/${Date.now()}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            return await getDownloadURL(storageRef);
+        }
+
+        function updateProgress(step) {
+            document.querySelectorAll('.step').forEach((s, i) => {
+                if (i < step - 1) {
+                    s.classList.add('completed');
+                    s.classList.remove('active');
+                } else if (i === step - 1) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active', 'completed');
+                }
+            });
+            document.getElementById('progressLine').style.width = `${((step - 1) / 3) * 100}%`;
+        }
+
+        window.goBack = () => {
+            document.getElementById('reviewStep').classList.add('hidden');
+            document.getElementById('scanMaterialsStep').classList.remove('hidden');
+            updateProgress(2);
+        };
+    </script>
+</body>
+
+</html>

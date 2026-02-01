@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Profile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-right: 15px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .farmer-header {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .farmer-name {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .farmer-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-complete {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .status-pending {
+            background: #fee;
+            color: #c00;
+        }
+
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .section {
+            margin: 30px 0;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .photo-item {
+            position: relative;
+            padding-top: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+        }
+
+        .photo-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row strong {
+            color: #666;
+        }
+
+        .info-row span {
+            color: #333;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 10px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='admin-dashboard.html'">←</button>
+        <h1>👤 Farmer Profile</h1>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="farmer-header" id="farmerHeader"></div>
+
+            <!-- Unloading Section -->
+            <div class="section">
+                <div class="section-title">📦 Unloading Records</div>
+                <div id="unloadingSection"></div>
+            </div>
+
+            <!-- Installation Section -->
+            <div class="section">
+                <div class="section-title">⚙️ Installation Records</div>
+                <div id="installationSection"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">×</span>
+        <img id="lightboxImg" src="">
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
+            authDomain: "gen-lang-client-0579320558.firebaseapp.com",
+            projectId: "gen-lang-client-0579320558",
+            storageBucket: "gen-lang-client-0579320558.firebasestorage.app",
+            messagingSenderId: "770401014858",
+            appId: "1:770401014858:web:placeholder"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Check auth
+        onAuthStateChanged(auth, (user) => {
+            if (!user || user.email !== 'test@example.com') {
+                window.location.href = 'index.html';
+                return;
+            }
+            loadFarmerProfile();
+        });
+
+        async function loadFarmerProfile() {
+            const farmerData = JSON.parse(sessionStorage.getItem('viewingFarmer'));
+            if (!farmerData) {
+                window.location.href = 'admin-dashboard.html';
+                return;
+            }
+
+            // Display farmer header
+            const header = document.getElementById('farmerHeader');
+            let unloadingBadge = `<span class="status-badge status-${farmerData.unloading_status === 'done' ? 'complete' : 'pending'}">
+                Unloading: ${farmerData.unloading_status || 'Pending'}
+            </span>`;
+            let installationBadge = `<span class="status-badge status-${farmerData.installation_status === 'done' ? 'complete' : 'pending'}">
+                Installation: ${farmerData.installation_status || 'Pending'}
+            </span>`;
+
+            header.innerHTML = `
+                <div class="farmer-name">${farmerData.name}</div>
+                <div class="farmer-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Location:</span>
+                        <span class="detail-value">${farmerData.location}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Phone:</span>
+                        <span class="detail-value">${farmerData.phone}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">HP:</span>
+                        <span class="detail-value">${farmerData.hp}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Controller:</span>
+                        <span class="detail-value">${farmerData.controller_serial || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Pump:</span>
+                        <span class="detail-value">${farmerData.pump_serial || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Panel Type:</span>
+                        <span class="detail-value">${farmerData.panel_type || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="status-badges">
+                    ${unloadingBadge}
+                    ${installationBadge}
+                </div>
+            `;
+
+            // Load unloading records
+            await loadUnloadingRecords(farmerData.id);
+
+            // Load installation records
+            await loadInstallationRecords(farmerData.id);
+        }
+
+        async function loadUnloadingRecords(farmerId) {
+            const section = document.getElementById('unloadingSection');
+            try {
+                const q = query(collection(db, 'unloading_records'), where('farmer_id', '==', farmerId));
+                const snapshot = await getDocs(q);
+
+                if (snapshot.empty) {
+                    section.innerHTML = '<div class="no-data">No unloading records yet</div>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    section.innerHTML = `
+                        <div class="info-box">
+                            <div class="info-row">
+                                <strong>Controller QR:</strong>
+                                <span>${data.controller_qr}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Pump QR:</strong>
+                                <span>${data.pump_qr} (${data.pump_hp} HP)</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Panels QR:</strong>
+                                <span>${data.panels_qr} (${data.panels_type})</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Worker:</strong>
+                                <span>${data.worker_email}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Date:</strong>
+                                <span>${data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'N/A'}</span>
+                            </div>
+                        </div>
+
+                        <h4 style="margin: 20px 0 10px 0;">Photos:</h4>
+                        <div class="photo-grid">
+                            ${createPhotoItem(data.controller_photo, 'Controller')}
+                            ${createPhotoItem(data.pump_photo, 'Pump')}
+                            ${createPhotoItem(data.panels_photo, 'Panels')}
+                            ${data.issue_photos && data.issue_photos.length > 0 ?
+                            data.issue_photos.map(url => createPhotoItem(url, 'Issue')).join('') :
+                            ''}
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading unloading records:', error);
+                section.innerHTML = '<div class="no-data">Error loading data</div>';
+            }
+        }
+
+        async function loadInstallationRecords(farmerId) {
+            const section = document.getElementById('installationSection');
+            try {
+                const q = query(collection(db, 'installation_records'), where('farmer_id', '==', farmerId));
+                const snapshot = await getDocs(q);
+
+                if (snapshot.empty) {
+                    section.innerHTML = '<div class="no-data">No installation records yet</div>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    section.innerHTML = `
+                        <div class="info-box">
+                            <div class="info-row">
+                                <strong>Worker:</strong>
+                                <span>${data.worker_email}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Date:</strong>
+                                <span>${data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'N/A'}</span>
+                            </div>
+                            ${data.issue_description ? `
+                                <div class="info-row">
+                                    <strong>Issues Reported:</strong>
+                                    <span>${data.issue_description}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <h4 style="margin: 20px 0 10px 0;">Installation Photos:</h4>
+                        <div class="photo-grid">
+                            ${data.installation_photos.map(url => createPhotoItem(url, 'Installation')).join('')}
+                        </div>
+
+                        ${data.issue_photos && data.issue_photos.length > 0 ? `
+                            <h4 style="margin: 20px 0 10px 0;">Issue Photos:</h4>
+                            <div class="photo-grid">
+                                ${data.issue_photos.map(url => createPhotoItem(url, 'Issue')).join('')}
+                            </div>
+                        ` : ''}
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading installation records:', error);
+                section.innerHTML = '<div class="no-data">Error loading data</div>';
+            }
+        }
+
+        function createPhotoItem(url, caption) {
+            if (!url) return '';
+            return `
+                <div class="photo-item" onclick="openLightbox('${url}', event)">
+                    <img src="${url}" alt="${caption}">
+                    <div class="photo-caption">${caption}</div>
+                </div>
+            `;
+        }
+
+        window.openLightbox = (url, event) => {
+            event.stopPropagation();
+            document.getElementById('lightboxImg').src = url;
+            document.getElementById('lightbox').classList.add('active');
+        };
+
+        window.closeLightbox = () => {
+            document.getElementById('lightbox').classList.remove('active');
+        };
+    </script>
+</body>
+
+</html>
