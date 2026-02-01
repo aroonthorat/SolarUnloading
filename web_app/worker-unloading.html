@@ -346,7 +346,7 @@
                     <span>Controller</span>
                 </div>
                 <div id="qrReaderController" class="hidden"></div>
-                <button class="btn btn-secondary" onclick="scanQR('controller')">📷 Scan Controller QR</button>
+                <button class="btn btn-secondary" onclick="scanQR('controller')">📷 Scan Controller Barcode</button>
                 <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
                     onchange="handlePhoto('controller')">
                 <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
@@ -363,7 +363,7 @@
                     <span>Pump</span>
                 </div>
                 <div id="qrReaderPump" class="hidden"></div>
-                <button class="btn btn-secondary" onclick="scanQR('pump')">📷 Scan Pump QR</button>
+                <button class="btn btn-secondary" onclick="scanQR('pump')">📷 Scan Pump Barcode</button>
                 <select id="pumpHP" class="hidden">
                     <option value="">Select HP...</option>
                     <option value="1">1 HP</option>
@@ -389,7 +389,7 @@
                     <span>Solar Panels</span>
                 </div>
                 <div id="qrReaderPanels" class="hidden"></div>
-                <button class="btn btn-secondary" onclick="scanQR('panels')">📷 Scan Panel QR</button>
+                <button class="btn btn-secondary" onclick="scanQR('panels')">📷 Scan Panel Barcode</button>
                 <select id="panelType" class="hidden">
                     <option value="">Select Panel Type...</option>
                     <option value="Poly 335W">Polycrystalline 335W</option>
@@ -546,7 +546,19 @@
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        // Support both QR codes and regular barcodes
+                        formatsToSupport: [
+                            Html5QrcodeSupportedFormats.QR_CODE,
+                            Html5QrcodeSupportedFormats.CODE_128, // Most common barcode
+                            Html5QrcodeSupportedFormats.CODE_39,
+                            Html5QrcodeSupportedFormats.CODE_93,
+                            Html5QrcodeSupportedFormats.EAN_13,
+                            Html5QrcodeSupportedFormats.EAN_8
+                        ]
+                    },
                     (decodedText) => {
                         html5QrCode.stop();
                         readerDiv.classList.add('hidden');
@@ -554,10 +566,10 @@
                     }
                 );
             } catch (err) {
-                console.error('QR Scanner error:', err);
+                console.error('Scanner error:', err);
                 // Fallback: manual entry
-                const qr = prompt(`Enter ${type} QR code manually:`);
-                if (qr) handleQRScanned(type, qr);
+                const code = prompt(`Enter ${type} barcode/serial number manually:`);
+                if (code) handleQRScanned(type, code);
             }
         };
 
