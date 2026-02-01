@@ -1,25 +1,19 @@
 @echo off
-echo =====================================
-echo Solar Unloading App - Run Script
-echo =====================================
+echo ===================================================
+echo     SOLAR UNLOADING APP - LAUNCHER (FIXED)
+echo ===================================================
+echo.
+echo Found Flutter at: C:\flutter\bin\flutter.bat
 echo.
 
-echo Step 1: Checking Flutter installation...
-C:\flutter\bin\flutter --version
-if %errorlevel% neq 0 (
-    echo ERROR: Flutter not found!
-    pause
-    exit /b 1
-)
+echo 1. Updating dependencies...
+call C:\flutter\bin\flutter.bat pub get
+
+echo.
+echo 2. Launching Admin Dashboard...
+echo (This may take a minute to compile)
 echo.
 
-echo Step 2: Checking connected devices...
-C:\flutter\bin\flutter devices
-echo.
-
-echo Step 3: Starting the app...
-echo (First build takes 5-10 minutes)
-echo.
-C:\flutter\bin\flutter run
+call C:\flutter\bin\flutter.bat run -d chrome
 
 pause

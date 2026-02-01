@@ -55,11 +55,20 @@ This is a standalone web application that can be:
 
 Uses Firebase SDK 10.7.1 via CDN (no npm install needed).
 
+### v2.1 Update - Native Admin Dashboard
+The system now includes a powerful **Flutter-based Admin Dashboard** for advanced data management.
+
+**New Features (v2.1):**
+- 📊 **Native Desktop/Web App**: Moved from HTML admin to a robust Flutter implementation.
+- 🚦 **Staging & Review**: Imported files are staged first. You can review and uncheck rows before adding to the database.
+- 📝 **Smart AI Mapping**: Automatically maps Excel columns (Name, Mobile, Location) even if headers vary.
+- ✏️ **Manual Entry**: Paste CSV data or manually add farmers directly from the app.
+- 📥 **Export**: Download your full farmer database as CSV.
+
 ### Future Plans:
-- Android app version (Flutter - in progress)
-- Offline support
-- QR code scanning
-- Data export features
+- Offline support (Mobile App)
+- QR code scanning (In Progress)
+
 
 ---
 

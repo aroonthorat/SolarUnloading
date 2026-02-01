@@ -1,7 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-import 'screens/login_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +17,15 @@ class SolarUnloadingApp extends StatelessWidget {
       title: 'Solar Unloading App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      // Temporarily set to Admin Dashboard for testing
+      home: const AdminDashboardScreen(), 
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/admin': (context) => const AdminDashboardScreen(),
+      },
     );
   }
 }

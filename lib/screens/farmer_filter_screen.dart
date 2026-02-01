@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/searchable_filter.dart';
+import '../services/ai_analysis_service.dart';
+import '../widgets/ai_insights_card.dart';
 
 class FarmerFilterScreen extends StatefulWidget {
   const FarmerFilterScreen({Key? key}) : super(key: key);
@@ -11,20 +13,55 @@ class FarmerFilterScreen extends StatefulWidget {
 class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
   String? selectedCircle;
   String? selectedStatus;
+  List<AIInsight> aiInsights = [];
+  bool isLoadingAnalysis = true;
+
+  // Sample data simulating the Excel file structure
+  late List<FarmerData> allFarmers;
   
-  // Sample data from the Excel file
-  final List<String> circles = [
-    'CH. SAMBHAJINAGAR CIRCLE',
-    'JALGAON CIRCLE',
-    'JALNA CIRCLE',
-  ];
-  
-  final List<String> statuses = [
-    'JSR OUTCOME ACCEPTED',
-    'JSR OUTCOME REJECTED',
-    'JSR SUBMITTED',
-    'VENDOR INFORMATION RECEIVED',
-  ];
+  // Filter lists
+  List<String> circles = [];
+  List<String> statuses = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDataAndAnalyze();
+  }
+
+  Future<void> _loadDataAndAnalyze() async {
+    // Simmons loading data
+    await Future.delayed(Duration(seconds: 1));
+    
+    // Create mock data based on the Excel file we analyzed:
+    // 187 Accepted, 3 Rejected, 1 Submitted, 9 Vendor Info
+    // Circles: Sambhajinagar (~54%), Jalgaon (~35%), Jalna (~11%)
+    
+    List<FarmerData> mockData = [];
+    
+    // Add Sambhajinagar farmers (Accepted)
+    for(int i=0; i<100; i++) mockData.add(FarmerData("F$i", "CH. SAMBHAJINAGAR CIRCLE", "JSR OUTCOME ACCEPTED"));
+    // Add Sambhajinagar (Rejected)
+    for(int i=0; i<4; i++) mockData.add(FarmerData("F$i", "CH. SAMBHAJINAGAR CIRCLE", "JSR OUTCOME REJECTED")); // Anomaly
+    
+    // Add Jalgaon farmers
+    for(int i=0; i<60; i++) mockData.add(FarmerData("F$i", "JALGAON CIRCLE", "JSR OUTCOME ACCEPTED"));
+    for(int i=0; i<5; i++) mockData.add(FarmerData("F$i", "JALGAON CIRCLE", "VENDOR INFORMATION RECEIVED"));
+    
+    // Add Jalna
+    for(int i=0; i<20; i++) mockData.add(FarmerData("F$i", "JALNA CIRCLE", "JSR OUTCOME ACCEPTED"));
+    mockData.add(FarmerData("F999", "JALGAON CIRCLE", "JSR SUBMITTED")); // Rare one
+
+    setState(() {
+      allFarmers = mockData;
+      circles = mockData.map((e) => e.circle).toSet().toList();
+      statuses = mockData.map((e) => e.status).toSet().toList();
+      
+      // RUN AI ANALYSIS
+      aiInsights = AIAnalysisService.analyzeList(mockData);
+      isLoadingAnalysis = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +70,18 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
         title: Text('Farmer Filter'),
         backgroundColor: Colors.blue.shade700,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.analytics_outlined),
+            onPressed: () {
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("AI Analysis re-run completed")));
+               setState(() {
+                 aiInsights = AIAnalysisService.analyzeList(allFarmers);
+               });
+            },
+            tooltip: "Re-run AI Analysis",
+          )
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -51,7 +100,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
             children: [
               // Header Section
               Container(
-                padding: EdgeInsets.all(20),
+                padding: EdgeInsets.fromLTRB(20, 10, 20, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -65,7 +114,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Use search filters to find specific records',
+                      '${allFarmers.length} Records Loaded',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.9),
@@ -86,75 +135,91 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                     ),
                   ),
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.all(24),
+                    padding: EdgeInsets.only(bottom: 24), // Added padding at bottom
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Circle Filter
-                        SearchableFilter<String>(
-                          label: 'Circle',
-                          items: circles,
-                          selectedItem: selectedCircle,
-                          itemLabel: (item) => item,
-                          onChanged: (value) {
-                            setState(() {
-                              selectedCircle = value;
-                            });
-                          },
-                          hintText: 'Search for a circle...',
-                          prefixIcon: Icons.location_on,
-                          allowClear: true,
-                        ),
+                        // AI INSIGHTS SECTION
+                        if (isLoadingAnalysis)
+                          Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else
+                          AIInsightsOverview(insights: aiInsights),
+                          
+                        Divider(thickness: 1, color: Colors.grey.shade100),
                         
-                        SizedBox(height: 24),
-                        
-                        // Status Filter
-                        SearchableFilter<String>(
-                          label: 'Application Status',
-                          items: statuses,
-                          selectedItem: selectedStatus,
-                          itemLabel: (item) => item,
-                          onChanged: (value) {
-                            setState(() {
-                              selectedStatus = value;
-                            });
-                          },
-                          hintText: 'Search for a status...',
-                          prefixIcon: Icons.assignment,
-                          allowClear: true,
-                        ),
-                        
-                        SizedBox(height: 32),
-                        
-                        // Filter Summary Card
-                        if (selectedCircle != null || selectedStatus != null)
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.blue.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.filter_list, 
-                                      color: Colors.blue.shade700, 
-                                      size: 20
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Active Filters',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue.shade700,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Circle Filter
+                              SearchableFilter<String>(
+                                label: 'Circle',
+                                items: circles,
+                                selectedItem: selectedCircle,
+                                itemLabel: (item) => item,
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedCircle = value;
+                                  });
+                                },
+                                hintText: 'Search for a circle...',
+                                prefixIcon: Icons.location_on,
+                                allowClear: true,
+                              ),
+                              
+                              SizedBox(height: 24),
+                              
+                              // Status Filter
+                              SearchableFilter<String>(
+                                label: 'Application Status',
+                                items: statuses,
+                                selectedItem: selectedStatus,
+                                itemLabel: (item) => item,
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedStatus = value;
+                                  });
+                                },
+                                hintText: 'Search for a status...',
+                                prefixIcon: Icons.assignment,
+                                allowClear: true,
+                              ),
+                              
+                              SizedBox(height: 32),
+                              
+                              // Filter Summary Card
+                              if (selectedCircle != null || selectedStatus != null)
+                                Container(
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.blue.shade200),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.filter_list, 
+                                            color: Colors.blue.shade700, 
+                                            size: 20
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Active Filters',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue.shade700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
                                 SizedBox(height: 12),
                                 if (selectedCircle != null)
                                   _buildFilterChip(

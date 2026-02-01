@@ -269,10 +269,91 @@
         <img id="lightboxImg" src="">
     </div>
 
+    <!-- Edit Modal -->
+    <div id="editModal" class="lightbox" style="background: rgba(0,0,0,0.5);">
+        <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;"
+            onclick="event.stopPropagation()">
+            <div class="farmer-header" style="display:flex; justify-content:space-between;">
+                <h2>✏️ Edit Farmer Details</h2>
+                <button onclick="closeEditModal()"
+                    style="background:none; border:none; font-size:24px; cursor:pointer;">×</button>
+            </div>
+
+            <form id="editForm" onsubmit="saveFarmerDetails(event)">
+                <div class="farmer-details" style="grid-template-columns: 1fr 1fr;">
+                    <!-- Read-Only System Fields -->
+                    <div
+                        style="grid-column: span 2; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                        <small style="color:#666; display:block; margin-bottom:5px;">🔒 System Fields
+                            (Read-Only)</small>
+                        <div class="detail-item">
+                            <span class="detail-label">Beneficiary ID:</span>
+                            <input type="text" id="edit_ben_id" disabled
+                                style="border:none; background:transparent; font-weight:bold;">
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">JSR Status:</span>
+                            <input type="text" id="edit_jsr_status" disabled
+                                style="border:none; background:transparent;">
+                        </div>
+                    </div>
+
+                    <!-- Editable Fields -->
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Full Name</label>
+                        <input type="text" id="edit_name" required
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                    </div>
+
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Mobile No</label>
+                        <input type="text" id="edit_mobile" required pattern="[6-9][0-9]{9}"
+                            title="10 digit mobile starting with 6-9"
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                    </div>
+
+                    <!-- Cascading Dropdowns -->
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Zone</label>
+                        <select id="edit_zone" onchange="loadCircles()"
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <option value="">Select Zone</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Circle</label>
+                        <select id="edit_circle" onchange="loadDivisions()"
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <option value="">Select Circle</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Pump Load (HP)</label>
+                        <input type="number" id="edit_hp" min="1" max="50"
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                    </div>
+
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" class="btn" onclick="closeEditModal()"
+                        style="background:#ddd; margin-right:10px; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
+                    <button type="submit" class="btn"
+                        style="background:#28a745; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">💾
+                        Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script type="module">
+        import { LocationHierarchy } from './master_data.js';
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, getDocs, query, where, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -287,6 +368,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        let currentFarmerId = null;
+
         // Check auth
         onAuthStateChanged(auth, (user) => {
             if (!user || user.email !== 'test@example.com') {
@@ -296,12 +379,85 @@
             loadFarmerProfile();
         });
 
+        // Make functions global for HTML events
+        window.loadCircles = () => {
+            const zone = document.getElementById('edit_zone').value;
+            const circleSelect = document.getElementById('edit_circle');
+            circleSelect.innerHTML = '<option value="">Select Circle</option>';
+
+            if (zone && LocationHierarchy[zone]) {
+                Object.keys(LocationHierarchy[zone]).forEach(circle => {
+                    circleSelect.innerHTML += `<option value="${circle}">${circle}</option>`;
+                });
+            }
+        };
+
+        // Load Zones Init
+        const zoneSelect = document.getElementById('edit_zone');
+        Object.keys(LocationHierarchy).forEach(zone => {
+            zoneSelect.innerHTML += `<option value="${zone}">${zone}</option>`;
+        });
+
+        window.openEditModal = () => {
+            const data = JSON.parse(sessionStorage.getItem('viewingFarmer'));
+            if (!data) return;
+
+            document.getElementById('edit_ben_id').value = data.id || 'N/A';
+            document.getElementById('edit_jsr_status').value = data.unloading_status; // Using this as proxy for now
+            document.getElementById('edit_name').value = data.name;
+            document.getElementById('edit_mobile').value = data.phone;
+            document.getElementById('edit_hp').value = data.hp;
+
+            // Try to set Zone/Circle if they exist in data (Simple match)
+            // In a real app, you'd store ZONE and CIRCLE IDs explicitly
+
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeEditModal = () => {
+            document.getElementById('editModal').classList.remove('active');
+        };
+
+        window.saveFarmerDetails = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = "Saving...";
+
+            try {
+                const newData = {
+                    name: document.getElementById('edit_name').value,
+                    phone: document.getElementById('edit_mobile').value,
+                    hp: document.getElementById('edit_hp').value,
+                    location: document.getElementById('edit_circle').value || document.getElementById('edit_zone').value || "Updated Location",
+                    updatedAt: new Date()
+                };
+
+                // Update Firestore
+                await updateDoc(doc(db, 'farmers_master', currentFarmerId), newData);
+
+                // Update Session
+                const currentData = JSON.parse(sessionStorage.getItem('viewingFarmer'));
+                sessionStorage.setItem('viewingFarmer', JSON.stringify({ ...currentData, ...newData }));
+
+                alert("Profile Updated Successfully!");
+                window.location.reload();
+
+            } catch (error) {
+                console.error("Error updating:", error);
+                alert("Update failed: " + error.message);
+                btn.disabled = false;
+                btn.textContent = "💾 Save Changes";
+            }
+        };
+
         async function loadFarmerProfile() {
             const farmerData = JSON.parse(sessionStorage.getItem('viewingFarmer'));
             if (!farmerData) {
                 window.location.href = 'admin-dashboard.html';
                 return;
             }
+            currentFarmerId = farmerData.id; // Store for edit
 
             // Display farmer header
             const header = document.getElementById('farmerHeader');
@@ -313,36 +469,36 @@
             </span>`;
 
             header.innerHTML = `
-                <div class="farmer-name">${farmerData.name}</div>
-                <div class="farmer-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Location:</span>
-                        <span class="detail-value">${farmerData.location}</span>
+                <div style="flex:1">
+                    <div class="farmer-name">${farmerData.name}</div>
+                    <div class="farmer-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Location:</span>
+                            <span class="detail-value">${farmerData.location}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Phone:</span>
+                            <span class="detail-value">${farmerData.phone}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">HP:</span>
+                            <span class="detail-value">${farmerData.hp}</span>
+                        </div>
+                        <!-- ... other fields ... -->
+                         <div class="detail-item">
+                            <span class="detail-label">Ben ID:</span>
+                            <span class="detail-value" style="font-family:monospace">${farmerData.id}</span>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Phone:</span>
-                        <span class="detail-value">${farmerData.phone}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">HP:</span>
-                        <span class="detail-value">${farmerData.hp}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Controller:</span>
-                        <span class="detail-value">${farmerData.controller_serial || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Pump:</span>
-                        <span class="detail-value">${farmerData.pump_serial || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Panel Type:</span>
-                        <span class="detail-value">${farmerData.panel_type || 'N/A'}</span>
+                    <div class="status-badges">
+                        ${unloadingBadge}
+                        ${installationBadge}
                     </div>
                 </div>
-                <div class="status-badges">
-                    ${unloadingBadge}
-                    ${installationBadge}
+                <div>
+                     <button onclick="openEditModal()" class="btn" style="background:#667eea; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        ✏️ Edit Profile
+                    </button>
                 </div>
             `;
 
