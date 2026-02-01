@@ -427,26 +427,83 @@
 
             const uploadBtn = document.getElementById('uploadBtn');
             uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Uploading...';
+
+            console.log('Total rows to upload:', parsedData.length);
+            console.log('First row sample:', parsedData[0]);
 
             try {
-                for (const row of parsedData) {
-                    await addDoc(collection(db, 'farmers_master'), {
-                        name: row.Name || '',
-                        location: row.Location || '',
-                        phone: row.Phone || '',
-                        hp: row.HP || '',
-                        controller_serial: row.Controller_Serial || '',
-                        pump_serial: row.Pump_Serial || '',
-                        panel_type: row.Panel_Type || '',
-                        unloading_status: 'pending',
-                        installation_status: 'pending',
-                        createdAt: new Date(),
-                        updatedAt: new Date()
-                    });
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (let i = 0; i < parsedData.length; i++) {
+                    const row = parsedData[i];
+
+                    // Show progress
+                    uploadBtn.textContent = `Uploading ${i + 1}/${parsedData.length}...`;
+
+                    try {
+                        // Handle different column name formats (case-insensitive, with/without underscores)
+                        const getName = () => row.Name || row.name || row.NAME || row['Farmer Name'] || row['farmer name'] || row['FARMER NAME'] || '';
+                        const getLocation = () => row.Location || row.location || row.LOCATION || row.Village || row.village || row.VILLAGE || '';
+                        const getPhone = () => {
+                            const phone = row.Phone || row.phone || row.PHONE || row.Mobile || row.mobile || row.MOBILE || row.Contact || row.contact || '';
+                            return String(phone).trim();
+                        };
+                        const getHP = () => {
+                            const hp = row.HP || row.hp || row.Hp || row['HP Rating'] || row['hp rating'] || '';
+                            return String(hp).trim();
+                        };
+                        const getController = () => {
+                            const ctrl = row.Controller_Serial || row['Controller Serial'] || row.Controller || row.controller || row.CONTROLLER || '';
+                            return String(ctrl).trim();
+                        };
+                        const getPump = () => {
+                            const pump = row.Pump_Serial || row['Pump Serial'] || row.Pump || row.pump || row.PUMP || '';
+                            return String(pump).trim();
+                        };
+                        const getPanel = () => {
+                            const panel = row.Panel_Type || row['Panel Type'] || row.Panels || row.panels || row.Panel || row.panel || '';
+                            return String(panel).trim();
+                        };
+
+                        const farmerData = {
+                            name: getName(),
+                            location: getLocation(),
+                            phone: getPhone(),
+                            hp: getHP(),
+                            controller_serial: getController(),
+                            pump_serial: getPump(),
+                            panel_type: getPanel(),
+                            unloading_status: 'pending',
+                            installation_status: 'pending',
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        };
+
+                        // Only upload if name is not empty
+                        if (farmerData.name) {
+                            await addDoc(collection(db, 'farmers_master'), farmerData);
+                            successCount++;
+                        } else {
+                            console.warn(`Skipping row ${i + 1}: No name found`);
+                            errorCount++;
+                        }
+
+                    } catch (error) {
+                        console.error(`Error uploading row ${i + 1}:`, error);
+                        errorCount++;
+                    }
                 }
 
-                showSuccess(`Successfully uploaded ${parsedData.length} farmers!`);
+                if (successCount > 0) {
+                    showSuccess(`✓ Successfully uploaded ${successCount} out of ${parsedData.length} farmers!${errorCount > 0 ? ` (${errorCount} skipped/failed)` : ''}`);
+                }
+                if (errorCount > 0) {
+                    showError(`${errorCount} rows failed to upload. Check browser console (F12) for details.`);
+                }
+
+                console.log(`Upload complete: ${successCount} successful, ${errorCount} failed`);
+
                 document.getElementById('filePreview').innerHTML = '';
                 document.getElementById('uploadBtn').style.display = 'none';
                 currentFile = null;
@@ -456,6 +513,7 @@
                 loadDashboard();
             } catch (error) {
                 showError('Error uploading data: ' + error.message);
+                console.error('Upload error:', error);
             } finally {
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = 'Process & Upload';
