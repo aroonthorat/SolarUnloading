@@ -193,12 +193,18 @@
 
                 <div class="form-group">
                     <label for="farmer">Farmer Name / ID *</label>
-                    <input type="text" id="farmer" required>
+                    <select id="farmer" required
+                        style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px;">
+                        <option value="">Loading farmers...</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
                     <label for="materialType">Material Type *</label>
-                    <input type="text" id="materialType" required>
+                    <select id="materialType" required
+                        style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px;">
+                        <option value="">Loading material types...</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -226,7 +232,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
         const firebaseConfig = {
@@ -250,10 +256,46 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
+                loadFarmers();
+                loadMaterials();
             } else {
                 window.location.href = 'index.html';
             }
         });
+
+        // Load farmers from Firebase
+        async function loadFarmers() {
+            const select = document.getElementById('farmer');
+            try {
+                const snapshot = await getDocs(collection(db, 'farmers'));
+                select.innerHTML = '<option value="">Select farmer...</option>';
+                snapshot.forEach(doc => {
+                    const option = document.createElement('option');
+                    option.value = doc.data().name;
+                    option.textContent = doc.data().name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                select.innerHTML = '<option value="">Error loading farmers</option>';
+            }
+        }
+
+        // Load material types from Firebase
+        async function loadMaterials() {
+            const select = document.getElementById('materialType');
+            try {
+                const snapshot = await getDocs(collection(db, 'material_types'));
+                select.innerHTML = '<option value="">Select material type...</option>';
+                snapshot.forEach(doc => {
+                    const option = document.createElement('option');
+                    option.value = doc.data().name;
+                    option.textContent = doc.data().name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                select.innerHTML = '<option value="">Error loading material types</option>';
+            }
+        }
 
         // Display current date
         const now = new Date();

@@ -173,6 +173,13 @@
                 <h3>Add Installation</h3>
                 <p>Log pump installation with photos and details</p>
             </a>
+
+            <a href="admin.html" class="action-card" id="adminCard"
+                style="display:none; border-top: 4px solid #e74c3c;">
+                <div class="icon">🔧</div>
+                <h3>Admin Panel</h3>
+                <p>Manage farmers and material types</p>
+            </a>
         </div>
     </div>
 
@@ -196,6 +203,11 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('userEmail').textContent = user.email;
+
+                // Show admin card for admin users
+                if (user.email === 'test@example.com') {
+                    document.getElementById('adminCard').style.display = 'block';
+                }
             } else {
                 window.location.href = 'index.html';
             }

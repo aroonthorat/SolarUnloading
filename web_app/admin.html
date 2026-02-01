@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Admin - Manage Lists</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 20px;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .list-item {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-item h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .list-item p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .success,
+        .error {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .note {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🔧 Admin Panel</h1>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+
+    <div class="container">
+        <div id="success" class="success"></div>
+        <div id="error" class="error"></div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('farmers')">Farmer List</button>
+                <button class="tab" onclick="showTab('materials')">Material Types</button>
+            </div>
+
+            <!-- Farmers Tab -->
+            <div id="farmers-tab" class="tab-content active">
+                <div class="note">
+                    💡 Add farmers here. Users will select from this list when creating logs.
+                </div>
+
+                <form id="addFarmerForm">
+                    <div class="form-group">
+                        <label>Farmer Names (one per line)</label>
+                        <textarea id="farmerNames" required placeholder="Enter farmer names, one per line"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Farmers</button>
+                </form>
+
+                <h3 style="margin: 30px 0 15px 0;">Existing Farmers</h3>
+                <div id="farmersList"></div>
+            </div>
+
+            <!-- Materials Tab -->
+            <div id="materials-tab" class="tab-content">
+                <div class="note">
+                    💡 Add material types here. Users will select from this list for unloading logs.
+                </div>
+
+                <form id="addMaterialForm">
+                    <div class="form-group">
+                        <label>Material Types (one per line)</label>
+                        <textarea id="materialTypes" required
+                            placeholder="Enter material types, one per line"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Material Types</button>
+                </form>
+
+                <h3 style="margin: 30px 0 15px 0;">Existing Material Types</h3>
+                <div id="materialsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
+            authDomain: "gen-lang-client-0579320558.firebaseapp.com",
+            projectId: "gen-lang-client-0579320558",
+            storageBucket: "gen-lang-client-0579320558.firebasestorage.app",
+            messagingSenderId: "770401014858",
+            appId: "1:770401014858:web:placeholder"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Check admin access
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Check if user is admin (you can add role checking here)
+            // For now, test@example.com is admin
+            if (user.email !== 'test@example.com') {
+                alert('Access denied. Admin only.');
+                window.location.href = 'home.html';
+            }
+
+            loadFarmers();
+            loadMaterials();
+        });
+
+        // Tab switching
+        window.showTab = (tabName) => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        };
+
+        // Add farmers
+        document.getElementById('addFarmerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const names = document.getElementById('farmerNames').value.split('\n').filter(n => n.trim());
+
+            try {
+                for (const name of names) {
+                    await addDoc(collection(db, 'farmers'), {
+                        name: name.trim(),
+                        createdAt: new Date()
+                    });
+                }
+                showSuccess('Farmers added successfully!');
+                document.getElementById('farmerNames').value = '';
+                loadFarmers();
+            } catch (error) {
+                showError('Error adding farmers: ' + error.message);
+            }
+        });
+
+        // Add materials
+        document.getElementById('addMaterialForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const types = document.getElementById('materialTypes').value.split('\n').filter(t => t.trim());
+
+            try {
+                for (const type of types) {
+                    await addDoc(collection(db, 'material_types'), {
+                        name: type.trim(),
+                        createdAt: new Date()
+                    });
+                }
+                showSuccess('Material types added successfully!');
+                document.getElementById('materialTypes').value = '';
+                loadMaterials();
+            } catch (error) {
+                showError('Error adding material types: ' + error.message);
+            }
+        });
+
+        // Load farmers
+        async function loadFarmers() {
+            const list = document.getElementById('farmersList');
+            list.innerHTML = '<p style="color: #666;">Loading...</p>';
+
+            try {
+                const snapshot = await getDocs(collection(db, 'farmers'));
+                list.innerHTML = '';
+
+                if (snapshot.empty) {
+                    list.innerHTML = '<p style="color: #999;">No farmers added yet</p>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'list-item';
+                    div.innerHTML = `
+                        <div>
+                            <h3>${data.name}</h3>
+                        </div>
+                        <button class="delete-btn" onclick="window.deleteFarmer('${doc.id}')">Delete</button>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                list.innerHTML = '<p style="color: #e74c3c;">Error loading farmers</p>';
+            }
+        }
+
+        // Load materials
+        async function loadMaterials() {
+            const list = document.getElementById('materialsList');
+            list.innerHTML = '<p style="color: #666;">Loading...</p>';
+
+            try {
+                const snapshot = await getDocs(collection(db, 'material_types'));
+                list.innerHTML = '';
+
+                if (snapshot.empty) {
+                    list.innerHTML = '<p style="color: #999;">No material types added yet</p>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'list-item';
+                    div.innerHTML = `
+                        <div>
+                            <h3>${data.name}</h3>
+                        </div>
+                        <button class="delete-btn" onclick="window.deleteMaterial('${doc.id}')">Delete</button>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                list.innerHTML = '<p style="color: #e74c3c;">Error loading material types</p>';
+            }
+        }
+
+        // Delete functions
+        window.deleteFarmer = async (id) => {
+            if (confirm('Delete this farmer?')) {
+                try {
+                    await deleteDoc(doc(db, 'farmers', id));
+                    showSuccess('Farmer deleted');
+                    loadFarmers();
+                } catch (error) {
+                    showError('Error deleting farmer');
+                }
+            }
+        };
+
+        window.deleteMaterial = async (id) => {
+            if (confirm('Delete this material type?')) {
+                try {
+                    await deleteDoc(doc(db, 'material_types', id));
+                    showSuccess('Material type deleted');
+                    loadMaterials();
+                } catch (error) {
+                    showError('Error deleting material type');
+                }
+            }
+        };
+
+        // Show messages
+        function showSuccess(msg) {
+            const div = document.getElementById('success');
+            div.textContent = msg;
+            div.style.display = 'block';
+            setTimeout(() => div.style.display = 'none', 3000);
+        }
+
+        function showError(msg) {
+            const div = document.getElementById('error');
+            div.textContent = msg;
+            div.style.display = 'block';
+            setTimeout(() => div.style.display = 'none', 5000);
+        }
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await signOut(auth);
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+
+</html>
