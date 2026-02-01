@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "770401014858",
+    "project_id": "gen-lang-client-0579320558",
+    "storage_bucket": "gen-lang-client-0579320558.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770401014858:android:6e54d94733670491e542b3",
+        "android_client_info": {
+          "package_name": "com.solarunloading"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770401014858:android:2f9a7e1123b01ca2e542b3",
+        "android_client_info": {
+          "package_name": "com.solarunloading.solar_unloading_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
