@@ -16,15 +16,10 @@ class SolarUnloadingApp extends StatelessWidget {
     return MaterialApp(
       title: 'Solar Unloading App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      // Temporarily set to Admin Dashboard for testing
-      home: const AdminDashboardScreen(), 
+      // Reverting to Login Screen for mobile usage
+      home: const LoginScreen(), 
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/admin': (context) => const AdminDashboardScreen(),
       },
     );
   }

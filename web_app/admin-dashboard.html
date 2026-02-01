@@ -454,181 +454,244 @@
 
             const validTypes = [
                 'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'text/csv'
-            ];
-
-            if (!validTypes.includes(file.type)) {
-                showError('Please upload an Excel (.xlsx, .xls) or CSV file');
-                return;
-            }
-
-            currentFile = file;
-            document.getElementById('filePreview').innerHTML = `
-                <p>📄 Selected: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(2)} KB)</p>
-            `;
-            document.getElementById('uploadBtn').style.display = 'block';
-
-            // Preview data
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                parsedData = XLSX.utils.sheet_to_json(firstSheet);
-
-                document.getElementById('filePreview').innerHTML += `
-                    <p style="color: #28a745; margin-top: 10px;">
-                        ✅ Found ${parsedData.length} farmers in the file
-                    </p>
-                `;
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
         // Import Master Data
         import { LocationHierarchy, ValidationRules } from './master_data.js';
 
-        let validRows = [];
-        let errorRows = [];
+            // --- STAGING & IMPORT LOGIC ---
+            let stagingData = [];
+            let selectedIndices = new Set();
 
-        window.processFile = async () => {
-            if (!parsedData || parsedData.length === 0) {
-                showError('No data to upload');
+            async function processFile() {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                if (!file) {
+                    alert("Please select a file.");
+                    return;
+                }
+
+                document.getElementById('filePreview').innerHTML = '<p>Reading file...</p>';
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+
+                        // USE RAW PARSING (header: 1) to see everything
+                        const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                        console.log("Total Raw Rows:", rawRows.length);
+
+                        if (rawRows.length === 0) throw new Error("File appears empty.");
+
+                        // 1. Find Header Row
+                        let headerIdx = -1;
+                        let map = {};
+
+                        for (let i = 0; i < Math.min(20, rawRows.length); i++) {
+                            const rowStr = JSON.stringify(rawRows[i]).toLowerCase();
+                            if (rowStr.includes('name') || rowStr.includes('farmer') || rowStr.includes('beneficiary')) {
+                                headerIdx = i;
+                                break;
+                            }
+                        }
+
+                        if (headerIdx === -1) {
+                            // Fallback: Assume row 0 is header if we can't find one
+                            headerIdx = 0;
+                        }
+
+                        const headerRow = rawRows[headerIdx].map(c => String(c).toLowerCase().trim());
+                        console.log("Header Row found at " + headerIdx, headerRow);
+
+                        // Map Columns indices
+                        let nameIdx = -1, locIdx = -1, phoneIdx = -1, hpIdx = -1;
+
+                        headerRow.forEach((col, idx) => {
+                            if (col.includes('name') || col.includes('farmer')) nameIdx = idx;
+                            else if (col.includes('location') || col.includes('village') || col.includes('circle') || col.includes('address')) locIdx = idx;
+                            else if (col.includes('phone') || col.includes('mobile') || col.includes('contact')) phoneIdx = idx;
+                            else if (col.includes('hp') || col.includes('pump') || col.includes('load')) hpIdx = idx;
+                        });
+
+                        // Fallbacks if mapping failed
+                        if (nameIdx === -1) nameIdx = 0;
+                        if (locIdx === -1) locIdx = 1;
+                        if (phoneIdx === -1) phoneIdx = 2;
+                        if (hpIdx === -1) hpIdx = 3;
+
+                        // 2. Process Data Rows
+                        stagingData = [];
+                        for (let i = headerIdx + 1; i < rawRows.length; i++) {
+                            const row = rawRows[i];
+                            if (!row || row.length === 0) continue;
+
+                            // Helper safely get index
+                            const val = (idx) => (idx !== -1 && idx < row.length && row[idx] !== undefined) ? String(row[idx]).trim() : '';
+
+                            const name = val(nameIdx);
+                            // Skip completely empty rows
+                            if (!name && !val(locIdx) && !val(phoneIdx)) continue;
+
+                            if (name) {
+                                stagingData.push({
+                                    name: name,
+                                    location: val(locIdx),
+                                    phone: val(phoneIdx),
+                                    hp: val(hpIdx),
+                                    unloading_status: 'pending',
+                                    createdAt: new Date(),
+                                    originalRow: i + 1
+                                });
+                            }
+                        }
+
+                        console.log(`Parsed ${stagingData.length} valid farmers.`);
+
+                        // Select all by default
+                        selectedIndices = new Set(stagingData.map((_, i) => i));
+
+                        // Show Review UI
+                        renderStagingTable();
+
+                    } catch (err) {
+                        console.error(err);
+                        document.getElementById('filePreview').innerHTML = `<p class="error">Error: ${err.message}</p>`;
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function renderStagingTable() {
+            const preview = document.getElementById('filePreview');
+            if (stagingData.length === 0) {
+                preview.innerHTML = '<p class="error">No valid data found in file.</p>';
                 return;
             }
 
-            const uploadBtn = document.getElementById('uploadBtn');
-            uploadBtn.style.display = 'none'; // Hide process button during validation/preview
-
-            // 1. Column Mapping (Using our robust AI/Fallback from before)
-            let columnMapping = await mapColumnsWithAI(parsedData[0]);
-
-            // 2. Validate Rows
-            validRows = [];
-            errorRows = [];
-            const previewContainer = document.getElementById('filePreview');
-            previewContainer.innerHTML = '<h3>🔍 Validating Data...</h3>';
-
-            parsedData.forEach((row, index) => {
-                let errors = [];
-                let cleanRow = {};
-
-                // Helper to get mapped value
-                const getVal = (key) => {
-                    // Try mapped key, then fallback to direct access handling different cases
-                    let val = null;
-                    if (columnMapping && columnMapping[key]) val = row[columnMapping[key]];
-                    if (!val) val = row[key] || row[key.toUpperCase()] || row[key.toLowerCase()];
-                    return val ? String(val).trim() : '';
-                };
-
-                // Extract & Map
-                cleanRow.BENEFICIARY_NO = getVal('BENEFICIARY_NO') || ('TEMP-' + Date.now() + '-' + index);
-                cleanRow.FULL_NAME = getVal('name') || getVal('FULL_NAME') || getVal('Farmer Name');
-                cleanRow.MOBILE_NO = getVal('phone') || getVal('MOBILE_NO') || getVal('Contact');
-                cleanRow.LOCATION = getVal('location') || getVal('Village') || getVal('CIRCLE_NAME'); // Temp location field
-                cleanRow.PUMP_LOAD = getVal('hp') || getVal('PUMP_LOAD') || '3';
-
-                // --- VALIDATION CHECKS ---
-
-                // Required Fields
-                if (!cleanRow.FULL_NAME) errors.push("Missing Name");
-
-                // Mobile Validation
-                if (cleanRow.MOBILE_NO && !ValidationRules.MOBILE_NO.pattern.test(cleanRow.MOBILE_NO)) {
-                    errors.push("Invalid Mobile (Need 10 digits)");
-                }
-
-                // Numeric Check
-                if (isNaN(cleanRow.PUMP_LOAD) || cleanRow.PUMP_LOAD < ValidationRules.PUMP_LOAD.min || cleanRow.PUMP_LOAD > ValidationRules.PUMP_LOAD.max) {
-                    errors.push(`Invalid Pump Load (${cleanRow.PUMP_LOAD})`);
-                }
-
-                if (errors.length > 0) {
-                    row._errors = errors.join('; ');
-                    errorRows.push(row);
-                } else {
-                    validRows.push(cleanRow);
-                }
-            });
-
-            // 3. Show Preview Dashboard
             let html = `
-                <div class="card" style="margin-top:20px; border:1px solid #ddd;">
-                    <h3>📊 Validation Results</h3>
-                    <div style="display:flex; gap:20px; margin:15px 0;">
-                        <div style="padding:15px; background:#e8f5e9; border-radius:8px; flex:1; text-align:center;">
-                            <h2 style="color:#2e7d32; margin:0;">${validRows.length}</h2>
-                            <span>Valid Rows</span>
-                        </div>
-                        <div style="padding:15px; background:${errorRows.length > 0 ? '#ffebee' : '#f5f5f5'}; border-radius:8px; flex:1; text-align:center;">
-                            <h2 style="color:${errorRows.length > 0 ? '#c62828' : '#aaa'}; margin:0;">${errorRows.length}</h2>
-                            <span>Invalid Rows</span>
-                        </div>
+                <div class="card" style="border: 2px solid #667eea;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                         <h3>📝 Review Import (${stagingData.length} Candidates)</h3>
+                         <div>
+                             <button class="btn" style="background:#dc3545; color:white; margin-right:10px;" onclick="cancelStaging()">Discard</button>
+                             <button class="btn btn-primary" onclick="uploadSelectedStaging()">✅ Confirm & Import Selected</button>
+                         </div>
                     </div>
+                    <div style="max-height:400px; overflow-y:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" checked onclick="toggleAllStaging(this)"></th>
+                                    <th>Name</th>
+                                    <th>Location</th>
+                                    <th>Phone</th>
+                                    <th>HP</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
             `;
 
-            if (errorRows.length > 0) {
+            stagingData.forEach((row, index) => {
+                const isCheck = selectedIndices.has(index) ? 'checked' : '';
                 html += `
-                    <div style="margin-bottom:20px;">
-                        <button class="btn" style="background:#c62828; color:white;" onclick="downloadErrorLog()">
-                            ⚠️ Download Error Log (.csv)
-                        </button>
-                        <p style="margin-top:10px; font-size:12px; color:#666;">
-                            Contains ${errorRows.length} rows with issues. Fix them and upload again.
-                        </p>
-                    </div>
+                    <tr>
+                        <td><input type="checkbox" ${isCheck} onchange="toggleStagingRow(${index}, this.checked)"></td>
+                        <td>${row.name}</td>
+                        <td>${row.location}</td>
+                        <td>${row.phone}</td>
+                        <td>${row.hp}</td>
+                        <td><span class="status-badge status-pending">Ready</span></td>
+                    </tr>
                 `;
+            });
+
+            html += `</tbody></table></div></div>`;
+            preview.innerHTML = html;
+            preview.style.display = 'block';
+
+            // Hide upload area temporarily to focus on review
+            document.getElementById('uploadArea').style.display = 'none';
+        }
+
+        function toggleStagingRow(index, isChecked) {
+            if (isChecked) selectedIndices.add(index);
+            else selectedIndices.delete(index);
+        }
+
+        function toggleAllStaging(source) {
+            const checkboxes = document.querySelectorAll('#filePreview input[type="checkbox"]');
+            checkboxes.forEach((cb, idx) => {
+                if (idx > 0) { // skip header check
+                    cb.checked = source.checked;
+                    // adjust index -1 because first checkbox is header
+                    toggleStagingRow(idx - 1, source.checked);
+                }
+            });
+        }
+
+        function cancelStaging() {
+            stagingData = [];
+            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('fileInput').value = '';
+        }
+
+        async function uploadSelectedStaging() {
+            const toUpload = stagingData.filter((_, i) => selectedIndices.has(i));
+            if (toUpload.length === 0) {
+                alert("Please select at least one row.");
+                return;
             }
 
-            if (validRows.length > 0) {
-                html += `
-                    <button class="btn btn-primary" onclick="uploadValidData()">
-                        ✅ Upload ${validRows.length} Valid Records
-                    </button>
-                `;
-            }
-
-            html += `</div>`;
-            previewContainer.innerHTML = html;
-        };
-
-        window.downloadErrorLog = () => {
-            const header = Object.keys(errorRows[0]).join(',');
-            const csv = [header, ...errorRows.map(row => Object.values(row).map(v => `"${v}"`).join(','))].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'upload_errors.csv';
-            a.click();
-        };
-
-        window.uploadValidData = async () => {
-            const btn = event.target;
+            const btn = document.querySelector('button[onclick="uploadSelectedStaging()"]');
+            btn.innerHTML = "Submitting...";
             btn.disabled = true;
-            btn.textContent = "Uploading...";
 
             let successCount = 0;
-            try {
-                for (let i = 0; i < validRows.length; i++) {
-                    const data = validRows[i];
-                    data.createdAt = new Date();
-                    data.unloading_status = 'pending';
-                    data.installation_status = 'pending';
-
+            for (let data of toUpload) {
+                try {
+                    // Clean up display fields before toggle
+                    delete data.originalRow;
                     await addDoc(collection(db, 'farmers_master'), data);
                     successCount++;
+                } catch (e) {
+                    console.error("Upload error", e);
                 }
-                showSuccess(`Successfully uploaded ${successCount} records!`);
-                setTimeout(() => window.location.reload(), 2000); // Reset page
-            } catch (e) {
-                showError("Upload failed: " + e.message);
-                btn.disabled = false;
-                btn.textContent = "Try Again";
             }
+
+            alert(`Successfully imported ${successCount} farmers!`);
+            cancelStaging();
+            showTab('farmers');
+        }
+
+        // Manual Entry
+        window.showManualEntry = () => {
+            const name = prompt("Enter Farmer Name:");
+            if (!name) return;
+            const loc = prompt("Enter Location (Village/Circle):");
+            const phone = prompt("Enter Phone:");
+            const hp = prompt("Enter HP:");
+
+            const data = {
+                name, location: loc, phone, hp, unloading_status: 'pending', createdAt: new Date()
+            };
+
+            stagingData.push(data);
+            selectedIndices.add(stagingData.length - 1);
+            renderStagingTable();
         };
+
+        // Update the existing file input listener
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                processFile(); // Auto process on selection
+            }
+        });
 
         async function loadDashboard() {
             try {
@@ -656,61 +719,142 @@
 
         window.loadFarmers = async () => {
             const listDiv = document.getElementById('farmersList');
-            listDiv.innerHTML = '<p>Loading...</p>';
+            listDiv.innerHTML = '<div style="text-align:center; padding:20px;">LOADING...</div>';
 
             try {
-                const q = query(collection(db, 'farmers_master'));
-                const querySnapshot = await getDocs(q);
+                // Fetch only once
+                if (!window.allFarmersData || window.allFarmersData.length === 0) {
+                    const q = query(collection(db, 'farmers_master'));
+                    const querySnapshot = await getDocs(q);
 
-                // Store data for export
-                window.allFarmersData = [];
+                    window.allFarmersData = [];
+                    querySnapshot.forEach(doc => {
+                        const d = doc.data();
+                        d.id = doc.id;
+                        window.allFarmersData.push(d);
+                    });
+                }
 
-                if (querySnapshot.empty) {
+                if (window.allFarmersData.length === 0) {
                     listDiv.innerHTML = '<p>No farmers found.</p>';
                     return;
                 }
 
+                // Render Filter Bar
                 let html = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3>Total Records: ${querySnapshot.size}</h3>
-                        <button onclick="exportFarmersToCSV()" class="btn" style="background:#28a745; color:white; display:flex; align-items:center; gap:5px;">
-                            📥 Export to Excel/CSV
-                        </button>
+                    <div class="card" style="margin-bottom:20px; padding:15px; background:#f8f9fa;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <input type="text" id="searchBox" placeholder="🔍 Search Name, Phone, Location..." 
+                                   style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;"
+                                   onkeyup="filterFarmers()">
+                                   
+                            <select id="statusFilter" onchange="filterFarmers()" 
+                                    style="padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="all">ALL STATUS</option>
+                                <option value="pending">⚠️ Pending Unload</option>
+                                <option value="unloading_done">📦 Unloaded (Install Pending)</option>
+                                <option value="fully_complete">✅ Fully Complete</option>
+                            </select>
+                            
+                             <button onclick="exportFarmersToCSV()" class="btn" style="background:#28a745; color:white;">
+                                📥 Export CSV
+                            </button>
+                        </div>
                     </div>
+                    <div id="farmersResults"></div>
                 `;
 
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    data.id = doc.id; // Save ID
-                    window.allFarmersData.push(data); // Add to export list
-
-                    const statusClass = `status-${data.unloading_status || 'pending'}`;
-
-                    html += `
-                        <div class="farmer-item">
-                            <div class="farmer-details">
-                                <div class="farmer-name">${data.name}</div>
-                                <div class="farmer-meta">
-                                    📍 ${data.location} | 📞 ${data.phone} | ⚡ ${data.hp}HP
-                                </div>
-                            </div>
-                            <div style="text-align:right">
-                                <span class="status-badge ${statusClass}">
-                                    ${data.unloading_status || 'Pending'}
-                                </span>
-                                <button class="btn" style="padding:5px 10px; margin-left:10px; background:#667eea; color:white;" 
-                                    onclick="viewFarmer('${doc.id}')">View</button>
-                            </div>
-                        </div>
-                    `;
-                });
-
                 listDiv.innerHTML = html;
+                filterFarmers(); // Initial Render
+
             } catch (error) {
                 console.error("Error loading farmers:", error);
                 listDiv.innerHTML = '<p style="color:red">Error loading list.</p>';
             }
         };
+
+        window.filterFarmers = () => {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+
+            const filtered = window.allFarmersData.filter(f => {
+                // 1. Text Search (Expanded for Beneficiary ID/Name)
+                const name = (f.name || f.FULL_NAME || f.benefit_name || '').toLowerCase();
+                const phone = (f.phone || f.MOBILE_NO || '').toString();
+                const loc = (f.location || '').toLowerCase();
+
+                // Check ID fields (Firestore ID, or specific beneficiary columns if they exist)
+                const benId = (f.id || f.beneficiary_id || f.BENEFICIARY_NO || '').toLowerCase();
+
+                const textMatch = name.includes(search) ||
+                    phone.includes(search) ||
+                    loc.includes(search) ||
+                    benId.includes(search);
+
+                // 2. Status Filter
+                let statusMatch = true;
+                if (status === 'pending') statusMatch = (f.unloading_status === 'pending' || !f.unloading_status);
+                else if (status === 'unloading_done') statusMatch = (f.unloading_status === 'done' && f.installation_status !== 'done');
+                else if (status === 'fully_complete') statusMatch = (f.unloading_status === 'done' && f.installation_status === 'done');
+
+                return textMatch && statusMatch;
+            });
+
+            renderFarmersList(filtered);
+        };
+
+        function renderFarmersList(data) {
+            const container = document.getElementById('farmersResults');
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No matching farmers found.</p>';
+                return;
+            }
+
+            // Limit render to first 50 for speed (Infinite scroll could be added later)
+            const limit = 50;
+            const displayData = data.slice(0, limit);
+
+            let html = `<p style="margin-bottom:10px; color:#666;">Showing ${displayData.length} of ${data.length} results</p>`;
+
+            displayData.forEach(d => {
+                let statusLabel = 'Pending';
+                let statusClass = 'status-pending';
+
+                if (d.unloading_status === 'done') {
+                    if (d.installation_status === 'done') {
+                        statusLabel = 'Completed';
+                        statusClass = 'status-complete';
+                    } else {
+                        statusLabel = 'Unloaded';
+                        statusClass = 'status-installing';
+                    }
+                }
+
+                html += `
+                    <div class="farmer-item">
+                        <div class="farmer-details">
+                            <div class="farmer-name">${d.name}</div>
+                            <div class="farmer-meta">
+                                📍 ${d.location || '-'} | 📞 ${d.phone || '-'} | ⚡ ${d.hp || '-'}HP
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <span class="status-badge ${statusClass}">
+                                ${statusLabel}
+                            </span>
+                            <button class="btn" style="padding:5px 15px; margin-left:10px; background:#667eea; color:white;" 
+                                onclick="viewFarmer('${d.id}')">View</button>
+                        </div>
+                    </div>
+                 `;
+            });
+
+            if (data.length > limit) {
+                html += `<div style="text-align:center; padding:10px; color:#999;">...Use filters to see more results...</div>`;
+            }
+
+            container.innerHTML = html;
+        }
 
         window.exportFarmersToCSV = () => {
             if (!window.allFarmersData || window.allFarmersData.length === 0) {

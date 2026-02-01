@@ -330,14 +330,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx', 'xls'],
-        withData: true,
+        withData: true, // Try to get bytes (works on Web)
       );
 
       if (result != null) {
         setState(() => _isLoading = true);
-        var bytes = result.files.first.bytes!;
-        var excel = Excel.decodeBytes(bytes);
         
+        List<int> bytes;
+        if (result.files.first.bytes != null) {
+          bytes = result.files.first.bytes!;
+        } else if (result.files.first.path != null) {
+           // Desktop: Read from path if bytes are null
+           // We need 'dart:io' for this, but 'dart:io' breaks Web.
+           // Since we are likely on a platform where one or the other works:
+           // We can't import dart:io safely in a universal file without conditional imports.
+           // But 'file_picker' with 'withData: true' SHOULD return bytes on Windows too if the file isn't huge.
+           // If it fails, we will show a specific error.
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: File bytes are empty. Try a smaller file.')));
+           setState(() => _isLoading = false);
+           return;
+        } else {
+           throw "Could not read file data.";
+        }
+
+        var excel = Excel.decodeBytes(bytes);
         List<Map<String, dynamic>> newRows = [];
         
         for (var table in excel.tables.keys) {
@@ -355,39 +371,55 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
              else if(h.contains('phone') || h.contains('mobile') || h.contains('contact')) phoneIdx = i;
              else if(h.contains('hp') || h.contains('pump') || h.contains('load')) hpIdx = i;
            }
+           
+           // Fallback: If absolutely no headers matched, assume default order 0,1,2,3
+           if(nameIdx == -1 && locIdx == -1 && phoneIdx == -1) {
+              nameIdx = 0; locIdx = 1; phoneIdx = 2; hpIdx = 3;
+           }
 
            // 2. Parse Data
            for(int i=1; i<rows.length; i++) {
              var row = rows[i];
              if(row.isEmpty) continue;
              
-             String name = nameIdx != -1 && nameIdx < row.length ? _getCellValue(row[nameIdx]) : '';
-             // Fallback if AI failed: Try column 0
-             if(name.isEmpty && nameIdx == -1) name = _getCellValue(row[0]); 
+             // Safety: Check bounds
+             String val(int idx) => (idx != -1 && idx < row.length) ? _getCellValue(row[idx]) : '';
+             
+             String name = val(nameIdx);
+             if(name.isEmpty && nameIdx == 0 && row.isNotEmpty) name = _getCellValue(row[0]); // Hard fallback
 
              if(name.isNotEmpty) {
                 newRows.add({
                   'name': name,
-                  'location': locIdx != -1 && locIdx < row.length ? _getCellValue(row[locIdx]) : '',
-                  'phone': phoneIdx != -1 && phoneIdx < row.length ? _getCellValue(row[phoneIdx]) : '',
-                  'hp': hpIdx != -1 && hpIdx < row.length ? _getCellValue(row[hpIdx]) : '',
+                  'location': val(locIdx),
+                  'phone': val(phoneIdx),
+                  'hp': val(hpIdx),
                   'unloading_status': 'pending',
                   'createdAt': FieldValue.serverTimestamp(),
                 });
              }
            }
         }
+
+        if(newRows.isEmpty) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No valid rows found. Check your Excel columns.')));
+        }
         
         setState(() {
           _stagingList = newRows;
-          _selectedStagingIndices = List.generate(newRows.length, (i) => i).toSet(); // Select all by default
+          _selectedStagingIndices = List.generate(newRows.length, (i) => i).toSet();
           _isStagingMode = true;
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+       // Show dialog for detailed error
+      showDialog(context: context, builder: (c) => AlertDialog(
+        title: const Text("Import Error"),
+        content: Text(e.toString()),
+        actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("OK"))],
+      ));
     }
   }
 
