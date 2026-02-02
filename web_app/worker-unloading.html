@@ -584,18 +584,27 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
-                    // Smart Normalize Name
-                    let name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || '';
+                    // Super-Robust Name Normalization
+                    // Check all probable keys including those with spaces
+                    let name = data.name || data.Name || data.NAME || 
+                               data.full_name || data.FULL_NAME || data['Full Name'] ||
+                               data.beneficiary_name || data.BENEFICIARY_NAME || data['Beneficiary Name'] || 
+                               data['Farmer Name'] || 
+                               '';
+                    
                     const nameUpper = String(name).toUpperCase();
 
+                    // Filter out header rows/garbage data
                     if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
                         name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
                     }
-                    if (!name || name.length < 2) name = 'Unknown Farmer';
+                    
+                    // Fallback
+                    if (!name || name.length < 2) name = 'Unknown Farmer (' + doc.id.substr(0,4) + ')';
 
-                    const location = data.location || data.LOCATION || data.VILLAGE_NAME || data.VILLAGE || '';
-                    const phone = data.phone || data.MOBILE_NO || '';
-                    const hp = data.hp || data.PUMP_LOAD || '';
+                    const location = data.location || data.Location || data.VILLAGE_NAME || data.VILLAGE || data.Village || data['Village Name'] || '';
+                    const phone = data.phone || data.Phone || data.MOBILE_NO || data.Mobile || data['Mobile No'] || '';
+                    const hp = data.hp || data.HP || data.PUMP_LOAD || data.Pump_Load || data['Pump Load'] || '';
 
                     // Robust Status Check
                     let status = data.unloading_status || 'pending';

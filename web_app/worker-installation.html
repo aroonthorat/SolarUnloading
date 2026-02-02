@@ -262,6 +262,49 @@
             border-radius: 5px;
             border: 1px solid #ddd;
         }
+
+        /* Search Styles */
+        .farmer-search-container {
+            position: relative;
+        }
+
+        #farmerSearch {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        #farmerSearchResults {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .farmer-list-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .farmer-list-item:hover {
+            background: #f8f9fa;
+        }
+
+        .farmer-item-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .farmer-item-meta {
+            font-size: 13px;
+            color: #777;
+            margin-top: 3px;
+        }
     </style>
 </head>
 
@@ -278,9 +321,15 @@
         <!-- Farmer Selection -->
         <div class="card" id="selectStep">
             <h2>Select Farmer</h2>
-            <select id="farmerSelect" onchange="loadFarmerDetails()">
-                <option value="">Loading farmers...</option>
-            </select>
+            <div class="farmer-search-container">
+                <input type="text" id="farmerSearch" placeholder="🔍 Type Name or Phone..."
+                    onkeyup="filterFarmers(event)">
+                <div style="font-size:12px; color:#666; margin-top:5px; margin-bottom:5px;">👇 Click to select (Showing:
+                    Ready for Install)</div>
+                <div id="farmerSearchResults">
+                    <div style="padding:20px; text-align:center; color:#999;">Loading...</div>
+                </div>
+            </div>
             <div id="farmerInfo"></div>
         </div>
 
@@ -362,6 +411,7 @@
         let selectedFarmer = null;
         let installationPhotos = [];
         let issuePhotos = [];
+        let allFarmers = [];
 
         // Check auth
         onAuthStateChanged(auth, (user) => {
@@ -374,63 +424,120 @@
         });
 
         async function loadFarmers() {
-            const select = document.getElementById('farmerSelect');
+            const listContainer = document.getElementById('farmerSearchResults');
+            listContainer.style.display = 'block';
+
             try {
                 const snapshot = await getDocs(collection(db, 'farmers_master'));
-                select.innerHTML = '<option value="">Select farmer...</option>';
 
-                let count = 0;
+                allFarmers = [];
+                let readyCount = 0;
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
-                    // Smart Normalize Name (detect bad zone/division data)
-                    let name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || '';
+                    // Super-Robust Name Normalization
+                    let name = data.name || data.Name || data.NAME ||
+                        data.full_name || data.FULL_NAME || data['Full Name'] ||
+                        data.beneficiary_name || data.BENEFICIARY_NAME || data['Beneficiary Name'] ||
+                        data['Farmer Name'] ||
+                        '';
+
                     const nameUpper = String(name).toUpperCase();
                     if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
                         name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
                     }
-                    if (!name || name.length < 2) name = 'Unknown Farmer';
+                    if (!name || name.length < 2) name = 'Unknown Farmer (' + doc.id.substr(0, 4) + ')';
 
-                    const location = data.location || data.LOCATION || data.VILLAGE_NAME || data.VILLAGE || '';
-                    const hp = data.hp || data.PUMP_LOAD || '';
+                    const location = data.location || data.Location || data.VILLAGE_NAME || data.VILLAGE || '';
+                    const phone = data.phone || data.Phone || data.MOBILE_NO || '';
+                    const hp = data.hp || data.HP || data.PUMP_LOAD || '';
 
                     let unloadStatus = (data.unloading_status || 'pending').toLowerCase();
                     let installStatus = (data.installation_status || 'pending').toLowerCase();
 
                     // Only show farmers who have completed unloading
-                    if (unloadStatus === 'done' && installStatus !== 'done') {
-                        const option = document.createElement('option');
-                        option.value = doc.id;
-                        option.textContent = `${name.trim()} - ${location} (${hp} HP)`;
-                        option.dataset.farmer = JSON.stringify({ id: doc.id, name: name.trim(), location, hp, phone: data.phone || data.MOBILE_NO || '' });
-                        select.appendChild(option);
-                        count++;
+                    if (unloadStatus === 'done') {
+                        allFarmers.push({
+                            id: doc.id,
+                            name: name.trim(), location, phone, hp,
+                            installStatus,
+                            ...data
+                        });
+                        readyCount++;
                     }
                 });
 
-                if (count === 0) {
-                    select.innerHTML = '<option value="">No farmers ready for installation (Unloading must be done first)</option>';
+                console.log(`Loaded ${allFarmers.length} ready farmers.`);
+                renderFarmerList(allFarmers.slice(0, 50));
+
+                if (allFarmers.length === 0) {
+                    listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No farmers ready for installation.<br><small>(Must complete Unloading first)</small></div>';
                 }
+
             } catch (error) {
                 console.error('Error loading farmers:', error);
-                select.innerHTML = '<option value="">Error loading farmers</option>';
+                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error loading database: ' + error.message + '</div>';
             }
         }
 
-        window.loadFarmerDetails = () => {
-            const select = document.getElementById('farmerSelect');
-            if (!select.value) {
-                document.getElementById('installationForm').style.display = 'none';
+        window.renderFarmerList = (list) => {
+            const container = document.getElementById('farmerSearchResults');
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
                 return;
             }
 
-            const option = select.options[select.selectedIndex];
-            selectedFarmer = JSON.parse(option.dataset.farmer);
+            list.forEach(farmer => {
+                const isDone = farmer.installStatus === 'done';
+                const div = document.createElement('div');
+                div.className = 'farmer-list-item';
+                if (isDone) div.style.backgroundColor = '#f8f9fa';
+
+                div.innerHTML = `
+                     <div class="farmer-item-name" style="${isDone ? 'color:#666' : ''}">${farmer.name} ${isDone ? '✅' : ''}</div>
+                     <div class="farmer-item-meta">
+                         📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
+                     </div>
+                 `;
+                div.addEventListener('click', () => {
+                    selectFarmer(farmer);
+                });
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
+        };
+
+        window.filterFarmers = (e) => {
+            const term = document.getElementById('farmerSearch').value.toLowerCase();
+            const filtered = allFarmers.filter(f =>
+                (f.name || '').toLowerCase().includes(term) ||
+                (f.phone || '').includes(term) ||
+                (f.location || '').toLowerCase().includes(term)
+            );
+
+            if (e && e.key === 'Enter' && filtered.length > 0) {
+                selectFarmer(filtered[0]);
+                document.getElementById('farmerSearch').blur();
+                return;
+            }
+            renderFarmerList(filtered.slice(0, 20));
+        };
+
+        window.selectFarmer = (farmer) => {
+            selectedFarmer = farmer;
+            document.getElementById('farmerSearch').value = farmer.name;
+            document.getElementById('farmerSearchResults').style.display = 'none';
 
             const infoDiv = document.getElementById('farmerInfo');
             infoDiv.innerHTML = `
                 <div class="farmer-info" style="margin-top: 15px;">
-                    <div class="farmer-name">${selectedFarmer.name}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="farmer-name">${selectedFarmer.name}</div>
+                        <button style="border:none; background:none; color:blue; cursor:pointer;" onclick="location.reload()">Change</button>
+                    </div>
                     <div class="farmer-details">
                         <div>📍 ${selectedFarmer.location}</div>
                         <div>☎️ ${selectedFarmer.phone}</div>
@@ -440,7 +547,9 @@
                 <button class="btn" style="background:#e3f2fd; color:#0d47a1; margin-bottom:15px;" onclick="viewUnloadingDetails('${selectedFarmer.id}')">
                     ℹ️ View Unloading Photos & Info
                 </button>
-                <button class="btn btn-primary" onclick="startInstallation()">Start Installation</button>
+                <button class="btn btn-primary" onclick="startInstallation()">
+                    ${farmer.installStatus === 'done' ? '⚠️ Re-Log Custom' : 'Start Installation'}
+                </button>
             `;
         };
 
