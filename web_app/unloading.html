@@ -263,37 +263,88 @@
             }
         });
 
-        // Load farmers from Firebase
+        // Load farmers from Firebase (Simple Fetch)
         async function loadFarmers() {
             const select = document.getElementById('farmer');
+            select.innerHTML = '<option value="">Loading...</option>';
+
             try {
-                const snapshot = await getDocs(collection(db, 'farmers'));
+                // Direct fetch without 'where' clause to avoid missing index errors
+                const snapshot = await getDocs(collection(db, 'farmers_master'));
+
+                if (snapshot.empty) {
+                    select.innerHTML = '<option value="">No farmers found in database</option>';
+                    return;
+                }
+
+                // Clear and Populate
                 select.innerHTML = '<option value="">Select farmer...</option>';
+                let count = 0;
+
                 snapshot.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.data().name;
-                    option.textContent = doc.data().name;
-                    select.appendChild(option);
+                    const data = doc.data();
+                    // Filter in memory
+                    // Check logic: If status is undefined OR 'pending'
+                    if (!data.unloading_status || data.unloading_status === 'pending') {
+                        const option = document.createElement('option');
+                        // Use name as value
+                        const labelName = data.name || data.FULL_NAME || 'Unknown';
+                        option.value = labelName;
+
+                        let info = labelName;
+                        if (data.location) info += ` - ${data.location}`;
+                        else if (data.village) info += ` - ${data.village}`;
+
+                        if (data.phone) info += ` (${data.phone})`;
+
+                        option.textContent = info;
+                        option.setAttribute('data-id', doc.id);
+                        select.appendChild(option);
+                        count++;
+                    }
                 });
+
+                if (count === 0) {
+                    select.innerHTML = '<option value="">All farmers completed!</option>';
+                }
+
             } catch (error) {
-                select.innerHTML = '<option value="">Error loading farmers</option>';
+                console.error("Load Error:", error);
+                select.innerHTML = '<option value="">⚠️ Error: ' + error.message + '</option>';
             }
         }
 
-        // Load material types from Firebase
+        // Load material types from Firebase (with Hardcoded Fallback)
         async function loadMaterials() {
             const select = document.getElementById('materialType');
+            const defaults = ["Solar Panel", "Pump Controller", "Structure Structure", "Cables", "Accessories", "Complete Set"];
+
             try {
                 const snapshot = await getDocs(collection(db, 'material_types'));
-                select.innerHTML = '<option value="">Select material type...</option>';
+
+                // Collect all types (DB + Defaults)
+                let types = new Set(defaults);
                 snapshot.forEach(doc => {
+                    if (doc.data().name) types.add(doc.data().name);
+                });
+
+                select.innerHTML = '<option value="">Select material type...</option>';
+                types.forEach(name => {
                     const option = document.createElement('option');
-                    option.value = doc.data().name;
-                    option.textContent = doc.data().name;
+                    option.value = name;
+                    option.textContent = name;
                     select.appendChild(option);
                 });
             } catch (error) {
-                select.innerHTML = '<option value="">Error loading material types</option>';
+                console.error("Material Load Error:", error);
+                // Fallback rendering
+                select.innerHTML = '<option value="">Select material type...</option>';
+                defaults.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                });
             }
         }
 

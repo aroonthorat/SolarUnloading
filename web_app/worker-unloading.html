@@ -266,29 +266,46 @@
             display: none !important;
         }
 
-        select {
+        /* New Searchable List Styles */
+        .farmer-search-container {
+            position: relative;
+        }
+        #farmerSearch {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 16px;
-            margin: 10px 0;
+            margin-bottom: 10px;
         }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
+        #farmerSearchResults {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
             border-radius: 10px;
-            margin-bottom: 20px;
+            display: none; /* Hidden by default */
         }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
+        .farmer-list-item {
             padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .farmer-list-item:hover {
+            background: #f8f9fa;
+        }
+        .farmer-list-item.selected {
+            background: #e3f2fd;
+            border-left: 4px solid #667eea;
+        }
+        .farmer-item-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .farmer-item-meta {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -326,9 +343,14 @@
         <!-- Step 1: Select Farmer -->
         <div class="card" id="selectFarmerStep">
             <h2>Select Farmer</h2>
-            <select id="farmerSelect" onchange="loadFarmerDetails()">
-                <option value="">Loading farmers...</option>
-            </select>
+            
+            <div class="farmer-search-container">
+                <input type="text" id="farmerSearch" placeholder="🔍 Type Name, Phone or ID..." onkeyup="filterFarmers()">
+                <div id="farmerSearchResults">
+                    <div style="padding:20px; text-align:center; color:#999;">Loading farmers database...</div>
+                </div>
+            </div>
+
             <div id="farmerInfo" class="hidden"></div>
             <button class="btn btn-primary" id="startScanBtn" onclick="startScanning()" disabled>
                 Start Scanning Materials
@@ -458,6 +480,8 @@
 
         let currentUser = null;
         let selectedFarmer = null;
+        let allFarmers = []; // Store for filtering
+        
         let scannedData = {
             controller: { qr: '', photo: null },
             pump: { qr: '', hp: '', photo: null },
@@ -478,46 +502,106 @@
         });
 
         async function loadFarmers() {
-            const select = document.getElementById('farmerSelect');
+            const listContainer = document.getElementById('farmerSearchResults');
+            listContainer.style.display = 'block';
+            
             try {
+                // Fetch ALL farmers from master, do filtering in JS to handle status quirks
                 const snapshot = await getDocs(collection(db, 'farmers_master'));
-                select.innerHTML = '<option value="">Select farmer...</option>';
-
+                
+                allFarmers = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.unloading_status === 'pending' || data.unloading_status === 'in_progress') {
-                        const option = document.createElement('option');
-                        option.value = doc.id;
-                        option.textContent = `${data.name} - ${data.location} (${data.hp} HP)`;
-                        option.dataset.farmer = JSON.stringify({ id: doc.id, ...data });
-                        select.appendChild(option);
+                    // Robust Check: Allows 'pending', 'in_progress', or undefined (newly imported)
+                    if (!data.unloading_status || data.unloading_status === 'pending' || data.unloading_status === 'in_progress') {
+                        allFarmers.push({ id: doc.id, ...data });
                     }
                 });
+                
+                // Keep only top 50 initially to be fast
+                renderFarmerList(allFarmers.slice(0, 50));
+                
+                if(allFarmers.length === 0) {
+                     listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No pending unloads found. Good job!</div>';
+                }
+
             } catch (error) {
                 console.error('Error loading farmers:', error);
-                select.innerHTML = '<option value="">Error loading farmers</option>';
+                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error loading database. Check internet.</div>';
             }
         }
+        
+        window.renderFarmerList = (list) => {
+             const container = document.getElementById('farmerSearchResults');
+             container.innerHTML = '';
+             
+             if(list.length === 0) {
+                 container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
+                 return;
+             }
+             
+             list.forEach(farmer => {
+                 const div = document.createElement('div');
+                 div.className = 'farmer-list-item';
+                 div.innerHTML = `
+                     <div class="farmer-item-name">${farmer.name || 'Unknown Name'}</div>
+                     <div class="farmer-item-meta">
+                         📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
+                     </div>
+                 `;
+                 div.onclick = () => selectFarmer(farmer);
+                 container.appendChild(div);
+             });
+             container.style.display = 'block';
+        };
+        
+        window.filterFarmers = () => {
+             const term = document.getElementById('farmerSearch').value.toLowerCase();
+             const filtered = allFarmers.filter(f => 
+                  (f.name||'').toLowerCase().includes(term) || 
+                  (f.phone||'').includes(term) ||
+                  (f.location||'').toLowerCase().includes(term)
+             );
+             // Show top 20 matches
+             renderFarmerList(filtered.slice(0, 20));
+        };
 
-        window.loadFarmerDetails = () => {
-            const select = document.getElementById('farmerSelect');
-            if (!select.value) return;
-
-            const option = select.options[select.selectedIndex];
-            selectedFarmer = JSON.parse(option.dataset.farmer);
+        window.selectFarmer = (farmer) => {
+            selectedFarmer = farmer;
+            
+            // Highlight selection visually (optional, but we mainly fill the info box)
+            document.getElementById('farmerSearch').value = farmer.name;
+            document.getElementById('farmerSearchResults').style.display = 'none';
 
             const infoDiv = document.getElementById('farmerInfo');
+            infoDiv.classList.remove('hidden');
             infoDiv.className = 'farmer-info';
             infoDiv.innerHTML = `
-                <div class="farmer-name">${selectedFarmer.name}</div>
+                <div style="display:flex; justify-content:space-between;">
+                    <div class="farmer-name">${selectedFarmer.name}</div>
+                    <button style="border:none; background:none; color:#667eea; font-weight:bold;" onclick="clearSelection()">Change</button>
+                </div>
                 <div class="farmer-details">
-                    <div class="detail-item">📍 ${selectedFarmer.location}</div>
-                    <div class="detail-item">☎️ ${selectedFarmer.phone}</div>
-                    <div class="detail-item">⚡ ${selectedFarmer.hp} HP</div>
+                    <div class="detail-item">📍 ${selectedFarmer.location || 'N/A'}</div>
+                    <div class="detail-item">☎️ ${selectedFarmer.phone || 'N/A'}</div>
+                    <div class="detail-item">⚡ ${selectedFarmer.hp || '?'} HP</div>
                 </div>
             `;
-
-            document.getElementById('startScanBtn').disabled = false;
+            
+            // Enable Next
+            const btn = document.getElementById('startScanBtn');
+            btn.disabled = false;
+            btn.innerHTML = "Start Scanning for " + selectedFarmer.name.split(' ')[0];
+        };
+        
+        window.clearSelection = () => {
+             selectedFarmer = null;
+             document.getElementById('farmerInfo').classList.add('hidden');
+             document.getElementById('startScanBtn').disabled = true;
+             document.getElementById('startScanBtn').innerHTML = "Start Scanning Materials";
+             document.getElementById('farmerSearch').value = '';
+             document.getElementById('farmerSearchResults').style.display = 'block';
+             renderFarmerList(allFarmers.slice(0, 50));
         };
 
         window.startScanning = () => {
