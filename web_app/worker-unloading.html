@@ -315,6 +315,24 @@
             color: #888;
             margin-top: 4px;
         }
+
+        .scan-result {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 600;
+            border: 1px solid #c8e6c9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .scan-result::before {
+            content: '✓';
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -384,6 +402,9 @@
             </div>
             <!-- Hidden input for Gemini -->
             <input type="file" id="geminiInput" accept="image/*" capture="environment" class="hidden">
+
+            <div id="controllerResult" class="hidden scan-result"></div>
+
             <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
                 onchange="handlePhoto('controller')">
             <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
@@ -405,6 +426,9 @@
                 style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
                 AI Scan</button>
         </div>
+
+        <div id="pumpResult" class="hidden scan-result"></div>
+
         <select id="pumpHP" class="hidden">
             <option value="">Select HP...</option>
             <option value="1">1 HP</option>
@@ -435,6 +459,7 @@
             style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
             AI Scan</button>
     </div>
+    <div id="panelsResult" class="hidden scan-result"></div>
     <select id="panelType" class="hidden">
         <option value="">Select Panel Type...</option>
         <option value="Poly 335W">Polycrystalline 335W</option>
@@ -710,7 +735,7 @@
 
                         // Handle result
                         console.log("Gemini Scan Result:", text);
-                        handleScanSuccess(text.replace(/['"`]/g, '').trim(), type);
+                        handleQRScanned(text.replace(/['"`]/g, '').trim(), type);
 
                         btn.innerHTML = "✅ Found!";
                         setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
@@ -765,6 +790,14 @@
         window.handleQRScanned = (type, qrCode) => {
             scannedData[type].qr = qrCode;
 
+            // Show result immediately
+            const resDiv = document.getElementById(`${type}Result`);
+            if (resDiv) {
+                resDiv.textContent = `Serial: ${qrCode}`;
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('scan-result'); // Ensure class is applied
+            }
+
             // Show HP/Type selector and photo button
             if (type === 'pump') {
                 document.getElementById('pumpHP').classList.remove('hidden');
@@ -773,6 +806,11 @@
             }
 
             document.getElementById(`${type}PhotoBtn`).classList.remove('hidden');
+
+            // Auto scroll to next step
+            setTimeout(() => {
+                document.getElementById(`${type}PhotoBtn`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         };
 
         window.handlePhoto = async (type) => {
