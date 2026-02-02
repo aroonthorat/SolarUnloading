@@ -521,9 +521,18 @@
                 allFarmers = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // Normalize Name
-                    const name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || 'Unknown';
-                    const location = data.location || data.LOCATION || data.VILLAGE || '';
+
+                    // Smart Normalize Name (detect bad zone/division data)
+                    let name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || '';
+                    const nameUpper = String(name).toUpperCase();
+
+                    // If name is actually a ZONE/DIVISION/CIRCLE, use BENEFICIARY_NAME instead
+                    if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
+                        name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
+                    }
+                    if (!name || name.length < 2) name = 'Unknown Farmer';
+
+                    const location = data.location || data.LOCATION || data.VILLAGE_NAME || data.VILLAGE || '';
                     const phone = data.phone || data.MOBILE_NO || '';
                     const hp = data.hp || data.PUMP_LOAD || '';
 
@@ -534,7 +543,7 @@
                     if (status === 'pending' || status === 'in_progress') {
                         allFarmers.push({
                             id: doc.id,
-                            name, location, phone, hp,
+                            name: name.trim(), location, phone, hp,
                             ...data
                         });
                     }

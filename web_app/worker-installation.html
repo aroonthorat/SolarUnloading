@@ -307,9 +307,15 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
-                    // Normalize
-                    const name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || 'Unknown';
-                    const location = data.location || data.LOCATION || data.VILLAGE || '';
+                    // Smart Normalize Name (detect bad zone/division data)
+                    let name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || '';
+                    const nameUpper = String(name).toUpperCase();
+                    if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
+                        name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
+                    }
+                    if (!name || name.length < 2) name = 'Unknown Farmer';
+
+                    const location = data.location || data.LOCATION || data.VILLAGE_NAME || data.VILLAGE || '';
                     const hp = data.hp || data.PUMP_LOAD || '';
 
                     let unloadStatus = (data.unloading_status || 'pending').toLowerCase();
@@ -319,9 +325,8 @@
                     if (unloadStatus === 'done' && installStatus !== 'done') {
                         const option = document.createElement('option');
                         option.value = doc.id;
-                        option.textContent = `${name} - ${location} (${hp} HP)`;
-                        // Store normalized data
-                        option.dataset.farmer = JSON.stringify({ id: doc.id, name, location, hp, phone: data.phone || data.MOBILE_NO || '' });
+                        option.textContent = `${name.trim()} - ${location} (${hp} HP)`;
+                        option.dataset.farmer = JSON.stringify({ id: doc.id, name: name.trim(), location, hp, phone: data.phone || data.MOBILE_NO || '' });
                         select.appendChild(option);
                         count++;
                     }

@@ -316,7 +316,8 @@
             <div class="card">
                 <h2>Farmers Database</h2>
                 <p style="margin-bottom:10px; color:#666; font-size:13px;">Showing data from:
-                    <code>farmers_master</code></p>
+                    <code>farmers_master</code>
+                </p>
                 <div style="display:flex; gap:10px; margin-bottom:20px;">
                     <input type="text" id="searchBox" placeholder="Search Name, ID, or Location..."
                         style="padding:10px; border:1px solid #ddd; border-radius:8px; flex:1;"
@@ -357,16 +358,29 @@
         let stagingData = [];
         let selectedIndices = new Set();
 
-        // Helper: Data Normalizer
+        // Helper: Smart Data Normalizer (detects bad zone/division names)
         function normalizeFarmer(doc) {
             const d = doc.data();
-            // Handle different Key Casing and variations
+
+            // Start with potential name candidates
+            let name = d.name || d.FULL_NAME || d.BENEFICIARY_NAME || d.Farmer_Name || '';
+
+            // CRITICAL: If name contains ZONE/DIVISION/CIRCLE, it's corrupted data
+            const nameUpper = String(name).toUpperCase();
+            if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
+                console.warn(`Detected bad name "${name}" - using BENEFICIARY_NAME instead`);
+                name = d.BENEFICIARY_NAME || d.FULL_NAME || 'Unknown Farmer';
+            }
+
+            if (!name || name.length < 2) name = 'Unknown Farmer';
+
             return {
                 id: doc.id,
-                name: d.name || d.FULL_NAME || d.BENEFICIARY_NAME || d.Farmer_Name || 'Unknown',
-                location: d.location || d.LOCATION || d.VILLAGE || d.Village || d.CIRCLE_NAME || '',
+                name: name.trim(),
+                location: d.location || d.LOCATION || d.VILLAGE_NAME || d.VILLAGE || d.CIRCLE_NAME || '',
                 phone: d.phone || d.MOBILE_NO || d.Contact_No || '',
                 hp: d.hp || d.PUMP_LOAD || d.HP || '',
+                beneficiaryNo: d.BENEFICIARY_NO || d.id || '',
                 unloading_status: (d.unloading_status || 'pending').toLowerCase(),
                 installation_status: (d.installation_status || 'pending').toLowerCase(),
                 createdAt: d.createdAt || null
