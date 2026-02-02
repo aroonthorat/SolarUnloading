@@ -371,102 +371,116 @@
             <div id="farmerInfoHeader" class="farmer-info"></div>
 
             <!-- Controller -->
-            <div class="scan-section" id="controllerSection">
-                <div class="section-title">
-                    <span class="status-icon status-pending" id="controllerStatus">1</span>
-                    <span>Controller</span>
-                </div>
-                <div id="qrReaderController" class="hidden"></div>
-                <button class="btn btn-secondary" onclick="scanQR('controller')">📷 Scan Controller Barcode</button>
-                <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
-                    onchange="handlePhoto('controller')">
-                <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
-                    onclick="document.getElementById('controllerPhoto').click()">
-                    📸 Take Controller Photo
-                </button>
-                <div id="controllerScanned" class="hidden"></div>
+            <div class="section-title">
+                <span class="status-icon status-pending" id="controllerStatus">1</span>
+                <span>Controller</span>
             </div>
-
-            <!-- Pump -->
-            <div class="scan-section hidden" id="pumpSection">
-                <div class="section-title">
-                    <span class="status-icon status-pending" id="pumpStatus">2</span>
-                    <span>Pump</span>
-                </div>
-                <div id="qrReaderPump" class="hidden"></div>
-                <button class="btn btn-secondary" onclick="scanQR('pump')">📷 Scan Pump Barcode</button>
-                <select id="pumpHP" class="hidden">
-                    <option value="">Select HP...</option>
-                    <option value="1">1 HP</option>
-                    <option value="2">2 HP</option>
-                    <option value="3">3 HP</option>
-                    <option value="5">5 HP</option>
-                    <option value="7.5">7.5 HP</option>
-                    <option value="10">10 HP</option>
-                </select>
-                <input type="file" id="pumpPhoto" accept="image/*" capture="environment" class="hidden"
-                    onchange="handlePhoto('pump')">
-                <button class="btn btn-secondary hidden" id="pumpPhotoBtn"
-                    onclick="document.getElementById('pumpPhoto').click()">
-                    📸 Take Pump Photo
-                </button>
-                <div id="pumpScanned" class="hidden"></div>
+            <div id="qrReaderController" class="hidden"></div>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button class="btn btn-secondary" onclick="scanQR('controller')" style="flex:1;">📷 Scan QR</button>
+                <button class="btn btn-primary" onclick="scanWithGemini('controller')"
+                    style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                    AI Scan</button>
             </div>
-
-            <!-- Panels -->
-            <div class="scan-section hidden" id="panelsSection">
-                <div class="section-title">
-                    <span class="status-icon status-pending" id="panelsStatus">3</span>
-                    <span>Solar Panels</span>
-                </div>
-                <div id="qrReaderPanels" class="hidden"></div>
-                <button class="btn btn-secondary" onclick="scanQR('panels')">📷 Scan Panel Barcode</button>
-                <select id="panelType" class="hidden">
-                    <option value="">Select Panel Type...</option>
-                    <option value="Poly 335W">Polycrystalline 335W</option>
-                    <option value="Poly 350W">Polycrystalline 350W</option>
-                    <option value="Mono 400W">Monocrystalline 400W</option>
-                    <option value="Mono 450W">Monocrystalline 450W</option>
-                </select>
-                <input type="file" id="panelsPhoto" accept="image/*" capture="environment" class="hidden"
-                    onchange="handlePhoto('panels')">
-                <button class="btn btn-secondary hidden" id="panelsPhotoBtn"
-                    onclick="document.getElementById('panelsPhoto').click()">
-                    📸 Take Panels Photo
-                </button>
-                <div id="panelsScanned" class="hidden"></div>
-            </div>
-
-            <!-- Issues -->
-            <div class="scan-section hidden" id="issuesSection">
-                <h3>Notes & Issues</h3>
-                <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
-                    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
-                <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
-                <input type="file" id="issuePhoto" accept="image/*" capture="environment" multiple
-                    onchange="handleIssuePhotos()">
-                <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
-                    📸 Add Photos
-                </button>
-                <div id="issuePhotos" class="photo-preview"></div>
-            </div>
-
-            <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
-                Review & Submit
+            <!-- Hidden input for Gemini -->
+            <input type="file" id="geminiInput" accept="image/*" capture="environment" class="hidden">
+            <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
+                onchange="handlePhoto('controller')">
+            <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
+                onclick="document.getElementById('controllerPhoto').click()">
+                📸 Take Controller Photo
             </button>
+            <div id="controllerScanned" class="hidden"></div>
         </div>
 
-        <!-- Step 3: Review -->
-        <div class="card hidden" id="reviewStep">
-            <h2>Review Scanned Items</h2>
-            <div id="reviewContent"></div>
-            <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()">
-                ✓ Confirm & Upload
-            </button>
-            <button class="btn btn-secondary" onclick="goBack()">
-                ← Go Back to Edit
-            </button>
+        <!-- Pump -->
+        <div class="section-title">
+            <span class="status-icon status-pending" id="pumpStatus">2</span>
+            <span>Pump</span>
         </div>
+        <div id="qrReaderPump" class="hidden"></div>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button class="btn btn-secondary" onclick="scanQR('pump')" style="flex:1;">📷 Scan QR</button>
+            <button class="btn btn-primary" onclick="scanWithGemini('pump')"
+                style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                AI Scan</button>
+        </div>
+        <select id="pumpHP" class="hidden">
+            <option value="">Select HP...</option>
+            <option value="1">1 HP</option>
+            <option value="2">2 HP</option>
+            <option value="3">3 HP</option>
+            <option value="5">5 HP</option>
+            <option value="7.5">7.5 HP</option>
+            <option value="10">10 HP</option>
+        </select>
+        <input type="file" id="pumpPhoto" accept="image/*" capture="environment" class="hidden"
+            onchange="handlePhoto('pump')">
+        <button class="btn btn-secondary hidden" id="pumpPhotoBtn"
+            onclick="document.getElementById('pumpPhoto').click()">
+            📸 Take Pump Photo
+        </button>
+        <div id="pumpScanned" class="hidden"></div>
+    </div>
+
+    <!-- Panels -->
+    <div class="section-title">
+        <span class="status-icon status-pending" id="panelsStatus">3</span>
+        <span>Solar Panels</span>
+    </div>
+    <div id="qrReaderPanels" class="hidden"></div>
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
+        <button class="btn btn-primary" onclick="scanWithGemini('panels')"
+            style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+            AI Scan</button>
+    </div>
+    <select id="panelType" class="hidden">
+        <option value="">Select Panel Type...</option>
+        <option value="Poly 335W">Polycrystalline 335W</option>
+        <option value="Poly 350W">Polycrystalline 350W</option>
+        <option value="Mono 400W">Monocrystalline 400W</option>
+        <option value="Mono 450W">Monocrystalline 450W</option>
+    </select>
+    <input type="file" id="panelsPhoto" accept="image/*" capture="environment" class="hidden"
+        onchange="handlePhoto('panels')">
+    <button class="btn btn-secondary hidden" id="panelsPhotoBtn"
+        onclick="document.getElementById('panelsPhoto').click()">
+        📸 Take Panels Photo
+    </button>
+    <div id="panelsScanned" class="hidden"></div>
+    </div>
+
+    <!-- Issues -->
+    <div class="scan-section hidden" id="issuesSection">
+        <h3>Notes & Issues</h3>
+        <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
+            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
+        <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
+        <input type="file" id="issuePhoto" accept="image/*" capture="environment" multiple
+            onchange="handleIssuePhotos()">
+        <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
+            📸 Add Photos
+        </button>
+        <div id="issuePhotos" class="photo-preview"></div>
+    </div>
+
+    <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
+        Review & Submit
+    </button>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div class="card hidden" id="reviewStep">
+        <h2>Review Scanned Items</h2>
+        <div id="reviewContent"></div>
+        <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()">
+            ✓ Confirm & Upload
+        </button>
+        <button class="btn btn-secondary" onclick="goBack()">
+            ← Go Back to Edit
+        </button>
+    </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -475,6 +489,7 @@
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -489,6 +504,13 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
+
+        // Initialize Vertex AI
+        let vertexAI, geminiModel;
+        try {
+            vertexAI = getVertexAI(app);
+            geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
+        } catch (e) { console.warn("Gemini init failed:", e); }
 
         let currentUser = null;
         let selectedFarmer = null;
@@ -653,6 +675,54 @@
             `;
 
             updateProgress(2);
+        };
+
+        window.scanWithGemini = (type) => {
+            currentScanning = type;
+            const input = document.getElementById('geminiInput');
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // UI Feedback
+                const btn = document.querySelector(`button[onclick="scanWithGemini('${type}')"]`);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "⏳ Scanning...";
+                btn.disabled = true;
+
+                try {
+                    // Convert to Base64
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = async () => {
+                        const base64 = reader.result.split(',')[1];
+
+                        // Call Gemini
+                        const prompt = "Read the serial number, barcode, or QR code text from this image. Return ONLY the alphanumeric code string. Do not include 'Serial:', 'SN:', or any other text. If there are multiple, pick the most prominent serial number.";
+
+                        const result = await geminiModel.generateContent([
+                            prompt,
+                            { inlineData: { data: base64, mimeType: file.type } }
+                        ]);
+
+                        const response = result.response;
+                        const text = response.text().trim();
+
+                        // Handle result
+                        console.log("Gemini Scan Result:", text);
+                        handleScanSuccess(text.replace(/['"`]/g, '').trim(), type);
+
+                        btn.innerHTML = "✅ Found!";
+                        setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+                    };
+                } catch (error) {
+                    console.error("Gemini Scan Error:", error);
+                    alert("AI Scan failed. Please try standard scan or type manually.");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            };
+            input.click();
         };
 
         window.scanQR = async (type) => {
