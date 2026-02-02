@@ -1053,6 +1053,9 @@
                 // Update farmer status
                 await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {
                     unloading_status: 'done',
+                    unloaded_by_email: currentUser.email,
+                    unloaded_by_uid: currentUser.uid,
+                    unloaded_at: serverTimestamp(),
                     updatedAt: serverTimestamp()
                 });
 

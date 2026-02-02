@@ -711,6 +711,9 @@
                 // Update farmer status
                 await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {
                     installation_status: 'done',
+                    installed_by_email: currentUser.email,
+                    installed_by_uid: currentUser.uid,
+                    installed_at: serverTimestamp(),
                     updatedAt: serverTimestamp()
                 });
 
