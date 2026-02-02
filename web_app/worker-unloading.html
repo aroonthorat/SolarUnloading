@@ -389,123 +389,126 @@
             <div id="farmerInfoHeader" class="farmer-info"></div>
 
             <!-- Controller -->
-            <div class="section-title">
-                <span class="status-icon status-pending" id="controllerStatus">1</span>
-                <span>Controller</span>
-            </div>
-            <div id="qrReaderController" class="hidden"></div>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button class="btn btn-secondary" onclick="scanQR('controller')" style="flex:1;">📷 Scan QR</button>
-                <button class="btn btn-primary" onclick="scanWithGemini('controller')"
-                    style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
-                    AI Scan</button>
-            </div>
-            <!-- Hidden input for Gemini -->
-            <input type="file" id="geminiInput" accept="image/*" capture="environment" class="hidden">
+            <div class="scan-section" id="controllerSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="controllerStatus">1</span>
+                    <span>Controller</span>
+                </div>
+                <div id="qrReaderController" class="hidden"></div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="btn btn-secondary" onclick="scanQR('controller')" style="flex:1;">📷 Scan QR</button>
+                    <button class="btn btn-primary" onclick="scanWithGemini('controller')"
+                        style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                        AI Scan</button>
+                </div>
+                <!-- Hidden input for Gemini -->
+                <input type="file" id="geminiInput" accept="image/*" capture="environment" class="hidden">
 
-            <div id="controllerResult" class="hidden scan-result"></div>
+                <div id="controllerResult" class="hidden scan-result"></div>
 
-            <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
-                onchange="handlePhoto('controller')">
-            <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
-                onclick="document.getElementById('controllerPhoto').click()">
-                📸 Take Controller Photo
+                <input type="file" id="controllerPhoto" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('controller')">
+                <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
+                    onclick="document.getElementById('controllerPhoto').click()">
+                    📸 Take Controller Photo
+                </button>
+                <div id="controllerScanned" class="hidden"></div>
+            </div>
+
+            <!-- Pump -->
+            <div class="scan-section hidden" id="pumpSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="pumpStatus">2</span>
+                    <span>Pump</span>
+                </div>
+                <div id="qrReaderPump" class="hidden"></div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="btn btn-secondary" onclick="scanQR('pump')" style="flex:1;">📷 Scan QR</button>
+                    <button class="btn btn-primary" onclick="scanWithGemini('pump')"
+                        style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                        AI Scan</button>
+                </div>
+
+                <div id="pumpResult" class="hidden scan-result"></div>
+
+                <select id="pumpHP" class="hidden">
+                    <option value="">Select HP...</option>
+                    <option value="1">1 HP</option>
+                    <option value="2">2 HP</option>
+                    <option value="3">3 HP</option>
+                    <option value="5">5 HP</option>
+                    <option value="7.5">7.5 HP</option>
+                    <option value="10">10 HP</option>
+                </select>
+                <input type="file" id="pumpPhoto" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('pump')">
+                <button class="btn btn-secondary hidden" id="pumpPhotoBtn"
+                    onclick="document.getElementById('pumpPhoto').click()">
+                    📸 Take Pump Photo
+                </button>
+                <div id="pumpScanned" class="hidden"></div>
+            </div>
+
+            <!-- Panels -->
+            <div class="scan-section hidden" id="panelsSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="panelsStatus">3</span>
+                    <span>Solar Panels</span>
+                </div>
+                <div id="qrReaderPanels" class="hidden"></div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
+                    <button class="btn btn-primary" onclick="scanWithGemini('panels')"
+                        style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                        AI Scan</button>
+                </div>
+                <div id="panelsResult" class="hidden scan-result"></div>
+                <select id="panelType" class="hidden">
+                    <option value="">Select Panel Type...</option>
+                    <option value="Poly 335W">Polycrystalline 335W</option>
+                    <option value="Poly 350W">Polycrystalline 350W</option>
+                    <option value="Mono 400W">Monocrystalline 400W</option>
+                    <option value="Mono 450W">Monocrystalline 450W</option>
+                </select>
+                <input type="file" id="panelsPhoto" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('panels')">
+                <button class="btn btn-secondary hidden" id="panelsPhotoBtn"
+                    onclick="document.getElementById('panelsPhoto').click()">
+                    📸 Take Panels Photo
+                </button>
+                <div id="panelsScanned" class="hidden"></div>
+            </div>
+
+            <!-- Issues -->
+            <div class="scan-section hidden" id="issuesSection">
+                <h3>Notes & Issues</h3>
+                <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
+                    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
+                <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
+                <input type="file" id="issuePhoto" accept="image/*" capture="environment" multiple
+                    onchange="handleIssuePhotos()">
+                <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
+                    📸 Add Photos
+                </button>
+                <div id="issuePhotos" class="photo-preview"></div>
+            </div>
+
+            <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
+                Review & Submit
             </button>
-            <div id="controllerScanned" class="hidden"></div>
         </div>
 
-        <!-- Pump -->
-        <div class="section-title">
-            <span class="status-icon status-pending" id="pumpStatus">2</span>
-            <span>Pump</span>
+        <!-- Step 3: Review -->
+        <div class="card hidden" id="reviewStep">
+            <h2>Review Scanned Items</h2>
+            <div id="reviewContent"></div>
+            <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()">
+                ✓ Confirm & Upload
+            </button>
+            <button class="btn btn-secondary" onclick="goBack()">
+                ← Go Back to Edit
+            </button>
         </div>
-        <div id="qrReaderPump" class="hidden"></div>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <button class="btn btn-secondary" onclick="scanQR('pump')" style="flex:1;">📷 Scan QR</button>
-            <button class="btn btn-primary" onclick="scanWithGemini('pump')"
-                style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
-                AI Scan</button>
-        </div>
-
-        <div id="pumpResult" class="hidden scan-result"></div>
-
-        <select id="pumpHP" class="hidden">
-            <option value="">Select HP...</option>
-            <option value="1">1 HP</option>
-            <option value="2">2 HP</option>
-            <option value="3">3 HP</option>
-            <option value="5">5 HP</option>
-            <option value="7.5">7.5 HP</option>
-            <option value="10">10 HP</option>
-        </select>
-        <input type="file" id="pumpPhoto" accept="image/*" capture="environment" class="hidden"
-            onchange="handlePhoto('pump')">
-        <button class="btn btn-secondary hidden" id="pumpPhotoBtn"
-            onclick="document.getElementById('pumpPhoto').click()">
-            📸 Take Pump Photo
-        </button>
-        <div id="pumpScanned" class="hidden"></div>
-    </div>
-
-    <!-- Panels -->
-    <div class="section-title">
-        <span class="status-icon status-pending" id="panelsStatus">3</span>
-        <span>Solar Panels</span>
-    </div>
-    <div id="qrReaderPanels" class="hidden"></div>
-    <div style="display:flex; gap:10px; margin-bottom:10px;">
-        <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
-        <button class="btn btn-primary" onclick="scanWithGemini('panels')"
-            style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
-            AI Scan</button>
-    </div>
-    <div id="panelsResult" class="hidden scan-result"></div>
-    <select id="panelType" class="hidden">
-        <option value="">Select Panel Type...</option>
-        <option value="Poly 335W">Polycrystalline 335W</option>
-        <option value="Poly 350W">Polycrystalline 350W</option>
-        <option value="Mono 400W">Monocrystalline 400W</option>
-        <option value="Mono 450W">Monocrystalline 450W</option>
-    </select>
-    <input type="file" id="panelsPhoto" accept="image/*" capture="environment" class="hidden"
-        onchange="handlePhoto('panels')">
-    <button class="btn btn-secondary hidden" id="panelsPhotoBtn"
-        onclick="document.getElementById('panelsPhoto').click()">
-        📸 Take Panels Photo
-    </button>
-    <div id="panelsScanned" class="hidden"></div>
-    </div>
-
-    <!-- Issues -->
-    <div class="scan-section hidden" id="issuesSection">
-        <h3>Notes & Issues</h3>
-        <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
-            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
-        <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
-        <input type="file" id="issuePhoto" accept="image/*" capture="environment" multiple
-            onchange="handleIssuePhotos()">
-        <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
-            📸 Add Photos
-        </button>
-        <div id="issuePhotos" class="photo-preview"></div>
-    </div>
-
-    <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
-        Review & Submit
-    </button>
-    </div>
-
-    <!-- Step 3: Review -->
-    <div class="card hidden" id="reviewStep">
-        <h2>Review Scanned Items</h2>
-        <div id="reviewContent"></div>
-        <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()">
-            ✓ Confirm & Upload
-        </button>
-        <button class="btn btn-secondary" onclick="goBack()">
-            ← Go Back to Edit
-        </button>
-    </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
