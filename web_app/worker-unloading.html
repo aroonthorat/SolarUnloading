@@ -633,7 +633,10 @@
                          📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
                      </div>
                  `;
-                div.onclick = () => selectFarmer(farmer);
+                div.addEventListener('click', () => {
+                    console.log('Clicked farmer:', farmer.name);
+                    selectFarmer(farmer);
+                });
                 container.appendChild(div);
             });
             container.style.display = 'block';
@@ -652,19 +655,23 @@
 
 
         window.selectFarmer = (farmer) => {
+            console.log("Selecting farmer:", farmer);
             selectedFarmer = farmer;
 
-            // Highlight selection visually (optional, but we mainly fill the info box)
+            // Update Input
             document.getElementById('farmerSearch').value = farmer.name;
             document.getElementById('farmerSearchResults').style.display = 'none';
 
+            // Show Info Box
             const infoDiv = document.getElementById('farmerInfo');
             infoDiv.classList.remove('hidden');
+            infoDiv.style.display = 'block';
             infoDiv.className = 'farmer-info';
+
             infoDiv.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="farmer-name">${selectedFarmer.name}</div>
-                    <button style="border:none; background:none; color:#667eea; font-weight:bold;" onclick="clearSelection()">Change</button>
+                    <button style="border:none; background:none; color:#667eea; font-weight:bold; cursor:pointer;" onclick="clearSelection()">Change</button>
                 </div>
                 <div class="farmer-details">
                     <div class="detail-item">📍 ${selectedFarmer.location || 'N/A'}</div>
@@ -673,10 +680,12 @@
                 </div>
             `;
 
-            // Enable Next
+            // Enable Next Button
             const btn = document.getElementById('startScanBtn');
             btn.disabled = false;
-            btn.innerHTML = "Start Scanning for " + selectedFarmer.name.split(' ')[0];
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.innerHTML = "Start Scanning for " + (selectedFarmer.name.split(' ')[0] || "Farmer");
         };
 
         window.clearSelection = () => {
