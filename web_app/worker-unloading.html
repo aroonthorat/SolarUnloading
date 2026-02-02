@@ -429,12 +429,19 @@
 
                 <div id="controllerResult" class="hidden scan-result"></div>
 
-                <input type="file" id="controllerPhoto" accept="image/*" class="hidden"
-                    onchange="handlePhoto('controller')">
-                <button class="btn btn-secondary hidden" id="controllerPhotoBtn"
-                    onclick="document.getElementById('controllerPhoto').click()">
-                    📸 Take Controller Photo
-                </button>
+                <input type="file" id="controllerCam" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('controller', this)">
+                <input type="file" id="controllerFile" accept="image/*" class="hidden"
+                    onchange="handlePhoto('controller', this)">
+
+                <div class="hidden" id="controllerPhotoBtn" style="margin-top:10px;">
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('controllerCam').click()">📸 Camera</button>
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('controllerFile').click()">🖼️ Gallery</button>
+                    </div>
+                </div>
                 <div id="controllerScanned" class="hidden"></div>
             </div>
 
@@ -463,11 +470,18 @@
                     <option value="7.5">7.5 HP</option>
                     <option value="10">10 HP</option>
                 </select>
-                <input type="file" id="pumpPhoto" accept="image/*" class="hidden" onchange="handlePhoto('pump')">
-                <button class="btn btn-secondary hidden" id="pumpPhotoBtn"
-                    onclick="document.getElementById('pumpPhoto').click()">
-                    📸 Take Pump Photo
-                </button>
+                <input type="file" id="pumpCam" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('pump', this)">
+                <input type="file" id="pumpFile" accept="image/*" class="hidden" onchange="handlePhoto('pump', this)">
+
+                <div class="hidden" id="pumpPhotoBtn" style="margin-top:10px;">
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('pumpCam').click()">📸 Camera</button>
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('pumpFile').click()">🖼️ Gallery</button>
+                    </div>
+                </div>
                 <div id="pumpScanned" class="hidden"></div>
             </div>
 
@@ -492,11 +506,19 @@
                     <option value="Mono 400W">Monocrystalline 400W</option>
                     <option value="Mono 450W">Monocrystalline 450W</option>
                 </select>
-                <input type="file" id="panelsPhoto" accept="image/*" class="hidden" onchange="handlePhoto('panels')">
-                <button class="btn btn-secondary hidden" id="panelsPhotoBtn"
-                    onclick="document.getElementById('panelsPhoto').click()">
-                    📸 Take Panels Photo
-                </button>
+                <input type="file" id="panelsCam" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('panels', this)">
+                <input type="file" id="panelsFile" accept="image/*" class="hidden"
+                    onchange="handlePhoto('panels', this)">
+
+                <div class="hidden" id="panelsPhotoBtn" style="margin-top:10px;">
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('panelsCam').click()">📸 Camera</button>
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('panelsFile').click()">🖼️ Gallery</button>
+                    </div>
+                </div>
                 <div id="panelsScanned" class="hidden"></div>
             </div>
 
@@ -506,10 +528,17 @@
                 <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
                     style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
                 <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
-                <input type="file" id="issuePhoto" accept="image/*" multiple onchange="handleIssuePhotos()">
-                <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
-                    📸 Add Photos
-                </button>
+                <input type="file" id="issueCam" accept="image/*" capture="environment" multiple class="hidden"
+                    onchange="handleIssuePhotos(this)">
+                <input type="file" id="issueFile" accept="image/*" multiple class="hidden"
+                    onchange="handleIssuePhotos(this)">
+
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="btn btn-secondary" style="flex:1"
+                        onclick="document.getElementById('issueCam').click()">📸 Camera</button>
+                    <button class="btn btn-secondary" style="flex:1"
+                        onclick="document.getElementById('issueFile').click()">🖼️ Gallery</button>
+                </div>
                 <div id="issuePhotos" class="photo-preview"></div>
             </div>
 
@@ -995,8 +1024,7 @@
             }, 100);
         };
 
-        window.handlePhoto = async (type) => {
-            const input = document.getElementById(`${type}Photo`);
+        window.handlePhoto = async (type, input) => {
             const file = input.files[0];
             if (!file) return;
 
@@ -1033,13 +1061,15 @@
             }
         };
 
-        window.handleIssuePhotos = () => {
-            const input = document.getElementById('issuePhoto');
-            scannedData.issues = Array.from(input.files);
+        window.handleIssuePhotos = (input) => {
+            if (!input) return;
+            const newFiles = Array.from(input.files);
+            // Append to existing
+            scannedData.issues = (scannedData.issues || []).concat(newFiles);
 
             const preview = document.getElementById('issuePhotos');
-            preview.innerHTML = '';
-            scannedData.issues.forEach(file => {
+            // preview.innerHTML = ''; // Don't clear if appending
+            newFiles.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const div = document.createElement('div');
