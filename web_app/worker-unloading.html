@@ -439,11 +439,14 @@
 
             <!-- Issues -->
             <div class="scan-section hidden" id="issuesSection">
-                <h3>Any Issues?</h3>
+                <h3>Notes & Issues</h3>
+                <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
+                    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
+                <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
                 <input type="file" id="issuePhoto" accept="image/*" capture="environment" multiple
                     onchange="handleIssuePhotos()">
                 <button class="btn btn-secondary" onclick="document.getElementById('issuePhoto').click()">
-                    📸 Add Issue Photos (Optional)
+                    📸 Add Photos
                 </button>
                 <div id="issuePhotos" class="photo-preview"></div>
             </div>
@@ -817,25 +820,43 @@
                 const issuePhotoUrls = [];
                 for (const photo of scannedData.issues) {
                     const url = await uploadPhoto(photo, 'issues');
-                    issuePhotoUrls.push(url);
+                    issueUrls.push(url);
                 }
 
                 // Save to Firestore
-                await addDoc(collection(db, 'unloading_records'), {
+                const unloadingData = {
                     farmer_id: selectedFarmer.id,
                     farmer_name: selectedFarmer.name,
-                    controller_qr: scannedData.controller.qr,
-                    controller_photo: controllerPhotoUrl,
-                    pump_qr: scannedData.pump.qr,
-                    pump_hp: scannedData.pump.hp,
-                    pump_photo: pumpPhotoUrl,
-                    panels_qr: scannedData.panels.qr,
-                    panels_type: scannedData.panels.type,
-                    panels_photo: panelsPhotoUrl,
-                    issue_photos: issuePhotoUrls,
+                    farmer_details: {
+                        beneficiaryNo: selectedFarmer.BENEFICIARY_NO || '',
+                        village: selectedFarmer.VILLAGE_NAME || selectedFarmer.location || '',
+                        taluka: selectedFarmer.TALUKA_NAME || '',
+                        pumpLoad: selectedFarmer.PUMP_LOAD || selectedFarmer.hp || ''
+                    },
+                    controller: {
+                        qr: scannedData.controller.qr,
+                        photo: controllerPhotoUrl
+                    },
+                    pump: {
+                        qr: scannedData.pump.qr,
+                        hp: scannedData.pump.hp,
+                        photo: pumpPhotoUrl
+                    },
+                    panels: {
+                        qr: scannedData.panels.qr,
+                        type: scannedData.panels.type,
+                        photo: panelsPhotoUrl
+                    },
+                    issues: {
+                        photos: issuePhotoUrls,
+                        notes: document.getElementById('unloadingNotes').value.trim() // Capture Notes
+                    },
                     worker_email: currentUser.email,
-                    timestamp: serverTimestamp()
-                });
+                    timestamp: serverTimestamp(),
+                    location_gps: null // Could add geo in future
+                };
+
+                await addDoc(collection(db, 'unloading_records'), unloadingData);
 
                 // Update farmer status
                 await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {

@@ -555,13 +555,17 @@
                      <div style="display:flex; align-items:center; gap:10px; flex:1;">
                         <input type="checkbox" onchange="toggleSelect('${f.id}')" ${isChecked} style="width:18px; height:18px; cursor:pointer;">
                         <div>
-                             <div style="font-weight:bold;">${f.name}</div>
-                             <div style="color:#777; font-size:13px;">${f.location} | 📞 ${f.phone} | ⚡ ${f.hp}HP</div>
-                             <div style="font-size:10px; color:#aaa;">ID: ${f.id}</div>
+                             <div style="font-weight:bold; font-size:16px;">${f.name} <span style="font-weight:normal; font-size:12px; color:#555; background:#eee; padding:2px 6px; border-radius:4px; margin-left:5px;">${f.beneficiaryNo || f.id}</span></div>
+                             <div style="color:#555; font-size:14px; margin-top:4px;">
+                                📍 ${f.VILLAGE_NAME || f.location} ${f.TALUKA_NAME ? ', ' + f.TALUKA_NAME : ''} ${f.PIN_CODE ? '- ' + f.PIN_CODE : ''}
+                             </div>
+                             <div style="color:#777; font-size:12px; margin-top:2px;">
+                                ⚡ Pump Load: <strong>${f.hp || f.PUMP_LOAD} HP</strong> &nbsp;|&nbsp; 📞 ${f.phone || '-'}
+                             </div>
                         </div>
                      </div>
                      <div style="display:flex; align-items:center; gap:10px;">
-                        <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status}</span>
+                        <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status.toUpperCase()}</span>
                         <div>
                             <button class="action-btn btn-edit" onclick="window.editFarmer('${f.id}')">✏️</button>
                             <button class="action-btn btn-delete" onclick="window.deleteFarmer('${f.id}')">🗑️</button>
