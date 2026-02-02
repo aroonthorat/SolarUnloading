@@ -558,10 +558,10 @@
 
         // Initialize Vertex AI
         let vertexAI, geminiModel;
-        try {
-            vertexAI = getVertexAI(app);
-            geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
-        } catch (e) { console.warn("Gemini init failed:", e); }
+        // try {
+        //     vertexAI = getVertexAI(app);
+        //     geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
+        // } catch (e) { console.warn("Gemini init failed:", e); }
 
         let currentUser = null;
         let selectedFarmer = null;
@@ -587,20 +587,31 @@
         });
 
         async function loadFarmers() {
+            // DEBUGGER: force show
             const listContainer = document.getElementById('farmerSearchResults');
             listContainer.style.display = 'block';
-            listContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Loading database...</div>';
+            listContainer.innerHTML = '<div style="padding:20px; text-align:center;">Loading DB... <br><span id="loadingStep">Initializing...</span></div>';
+
+            // Screen Logger
+            if (!document.getElementById('debugBox')) {
+                const b = document.createElement('div');
+                b.id = 'debugBox';
+                b.style.cssText = "position:fixed; bottom:0; left:0; right:0; height:150px; background:rgba(0,0,0,0.8); color:#0f0; font-family:monospace; padding:10px; font-size:10px; overflow:auto; z-index:9999;";
+                document.body.appendChild(b);
+                window.log = (m) => b.innerHTML += `<div>> ${m}</div>`;
+                window.log('Logger Started');
+            }
+            window.log('loadFarmers called');
 
             try {
-                // Fetch ALL farmers with 15s timeout
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Network Timeout (15s)")), 15000));
+                window.log('Fetching Firestore collection...');
+                document.getElementById('loadingStep').innerText = "Requesting Cloud Data...";
 
-                // OPTIMIZATION: If list is massive, we should paginate. 
-                // But for <5000, fetching all is okay.
-                const snapshot = await Promise.race([
-                    getDocs(collection(db, 'farmers_master')),
-                    timeoutPromise
-                ]);
+                // Simple fetch first
+                const snapshot = await getDocs(collection(db, 'farmers_master'));
+
+                window.log(`Snapshot received! Size: ${snapshot.size}`);
+                document.getElementById('loadingStep').innerText = "Processing Data...";
 
                 // DEBUG LOGS
                 console.log(`Debug: Found ${snapshot.size} docs from Firestore`);
