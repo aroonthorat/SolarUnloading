@@ -278,11 +278,13 @@
         }
 
         #farmerSearchResults {
-            max-height: 300px;
+            height: 60vh;
             overflow-y: auto;
             border: 1px solid #eee;
             border-radius: 10px;
-            display: none;
+            display: block;
+            /* Always visible */
+            background: #fff;
         }
 
         .farmer-list-item {
@@ -490,7 +492,7 @@
                 });
 
                 console.log(`Loaded ${allFarmers.length} total farmers (${readyCount} ready).`);
-                renderFarmerList(allFarmers.slice(0, 50));
+                renderFarmerList(allFarmers.slice(0, 100));
 
                 if (allFarmers.length === 0) {
                     listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No farmers found in database.</div>';
@@ -505,22 +507,36 @@
         window.renderFarmerList = (list) => {
             const container = document.getElementById('farmerSearchResults');
             container.innerHTML = '';
+            container.style.display = 'block';
+
+            // Summary Header
+            const header = document.createElement('div');
+            header.style.cssText = "padding:8px 15px; background:#f8f9fa; border-bottom:1px solid #eee; font-size:12px; color:#555; font-weight:bold; position:sticky; top:0; z-index:5;";
+            header.innerText = `📋 Showing ${list.length} matches (out of ${allFarmers.length})`;
+            container.appendChild(header);
 
             if (list.length === 0) {
-                container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
+                container.innerHTML += '<div style="padding:15px; text-align:center;">No matches found</div>';
                 return;
             }
 
             list.forEach(farmer => {
                 const isDone = farmer.installStatus === 'done';
+                const isReady = farmer.isReady; // From LoadFarmers
+
                 const div = document.createElement('div');
                 div.className = 'farmer-list-item';
                 if (isDone) div.style.backgroundColor = '#f8f9fa';
+                if (!isReady && !isDone) div.style.backgroundColor = '#fff8e1'; // Warning Yellow
 
                 div.innerHTML = `
-                     <div class="farmer-item-name" style="${isDone ? 'color:#666' : ''}">${farmer.name} ${isDone ? '✅' : ''}</div>
+                     <div class="farmer-item-name" style="${isDone ? 'color:#666' : ''}">
+                        ${farmer.name} ${isDone ? '✅' : ''} ${!isReady && !isDone ? '⚠️' : ''}
+                        <div style="font-size:11px; float:right; color:#999; margin-top:3px;">#${farmer.BENEFICIARY_NO || farmer.id.substr(0, 6)}</div>
+                     </div>
                      <div class="farmer-item-meta">
                          📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
+                         ${!isReady && !isDone ? '<div style="color:#f57c00; font-size:11px; font-weight:bold; margin-top:2px;">⚠️ Pending Unloading</div>' : ''}
                      </div>
                  `;
                 div.addEventListener('click', () => {
@@ -528,7 +544,6 @@
                 });
                 container.appendChild(div);
             });
-            container.style.display = 'block';
         };
 
         window.filterFarmers = (e) => {

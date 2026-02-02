@@ -281,12 +281,13 @@
         }
 
         #farmerSearchResults {
-            max-height: 300px;
+            height: 60vh;
             overflow-y: auto;
             border: 1px solid #eee;
             border-radius: 10px;
-            display: none;
-            /* Hidden by default */
+            display: block;
+            /* Always visible */
+            background: #fff;
         }
 
         .farmer-list-item {
@@ -649,7 +650,7 @@
 
                 console.log(`Debug: Loaded ${allFarmers.length} valid pending farmers. Rejected ${rejectedCount}.`);
 
-                renderFarmerList(allFarmers.slice(0, 50));
+                renderFarmerList(allFarmers.slice(0, 100));
 
                 if (allFarmers.length === 0) {
                     listContainer.innerHTML = `<div style="padding:20px; text-align:center;">
@@ -672,9 +673,16 @@
         window.renderFarmerList = (list) => {
             const container = document.getElementById('farmerSearchResults');
             container.innerHTML = '';
+            container.style.display = 'block';
+
+            // Count Header
+            const header = document.createElement('div');
+            header.style.cssText = "padding:8px 15px; background:#f8f9fa; border-bottom:1px solid #eee; font-size:12px; color:#555; font-weight:bold; position:sticky; top:0; z-index:5;";
+            header.innerText = `📋 Showing ${list.length} matches (out of ${allFarmers.length})`;
+            container.appendChild(header);
 
             if (list.length === 0) {
-                container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
+                container.innerHTML += '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
                 return;
             }
 
@@ -688,18 +696,17 @@
                      <div class="farmer-item-name" style="${isDone ? 'color:#666;' : ''}">
                         ${farmer.name}
                         ${isDone ? '<span style="font-size:12px; background:#d4edda; color:#155724; padding:2px 6px; border-radius:4px; margin-left:5px;">✅ Done</span>' : ''}
+                        <div style="font-size:11px; color:#999; margin-top:2px;">#${farmer.BENEFICIARY_NO || farmer.id.substr(0, 6)}</div>
                      </div>
                      <div class="farmer-item-meta">
                          📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
                      </div>
                  `;
                 div.addEventListener('click', () => {
-                    console.log('Clicked farmer:', farmer.name);
                     selectFarmer(farmer);
                 });
                 container.appendChild(div);
             });
-            container.style.display = 'block';
         };
 
         window.filterFarmers = (e) => {
@@ -719,8 +726,8 @@
                 return;
             }
 
-            // Show top 20 matches
-            renderFarmerList(filtered.slice(0, 20));
+            // Show top 100 matches
+            renderFarmerList(filtered.slice(0, 100));
         };
 
         window.aiSearch = async () => {
