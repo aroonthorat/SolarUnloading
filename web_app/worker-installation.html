@@ -276,7 +276,7 @@
         <div id="error" class="error"></div>
 
         <!-- Farmer Selection -->
-        <div class="card">
+        <div class="card" id="selectStep">
             <h2>Select Farmer</h2>
             <select id="farmerSelect" onchange="loadFarmerDetails()">
                 <option value="">Loading farmers...</option>
@@ -286,7 +286,11 @@
 
         <!-- Installation Form -->
         <div class="card" id="installationForm" style="display: none;">
-            <h2>Installation Details</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="margin:0;">Installation Details</h2>
+                <button class="btn btn-secondary" style="width:auto; padding:8px 15px; margin:0;"
+                    onclick="cancelInstallation()">← Change Farmer</button>
+            </div>
 
             <!-- Installation Photos -->
             <div class="section">
@@ -436,9 +440,20 @@
                 <button class="btn" style="background:#e3f2fd; color:#0d47a1; margin-bottom:15px;" onclick="viewUnloadingDetails('${selectedFarmer.id}')">
                     ℹ️ View Unloading Photos & Info
                 </button>
+                <button class="btn btn-primary" onclick="startInstallation()">Start Installation</button>
             `;
+        };
 
+        window.startInstallation = () => {
+            document.getElementById('selectStep').style.display = 'none';
             document.getElementById('installationForm').style.display = 'block';
+            window.scrollTo(0, 0);
+        };
+
+        window.cancelInstallation = () => {
+            document.getElementById('installationForm').style.display = 'none';
+            document.getElementById('selectStep').style.display = 'block';
+            window.scrollTo(0, 0);
         };
 
         window.closeModal = () => document.getElementById('detailsModal').classList.remove('active');
