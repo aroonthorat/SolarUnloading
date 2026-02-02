@@ -523,9 +523,22 @@
 
         <!-- Step 3: Review -->
         <div class="card hidden" id="reviewStep">
-            <h2>Review Scanned Items</h2>
+            <h2>Review & Sign</h2>
             <div id="reviewContent"></div>
-            <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()">
+
+            <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Farmer/Representative
+                    Signature:</label>
+                <canvas id="signature-pad" width="300" height="150"
+                    style="border:1px solid #ccc; background:white; width:100%; border-radius:4px; touch-action:none;"></canvas>
+                <div style="text-align:right; margin-top:5px;">
+                    <button type="button"
+                        style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
+                        onclick="clearSignature()">❌ Clear Signature</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()" style="margin-top:15px;">
                 ✓ Confirm & Upload
             </button>
             <button class="btn btn-secondary" onclick="goBack()">
@@ -535,11 +548,12 @@
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL, uploadString } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         // import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
 
         const firebaseConfig = {
@@ -575,6 +589,9 @@
         };
         let html5QrCode = null;
         let currentScanning = null;
+
+        let signaturePad = null;
+        window.clearSignature = () => { if (signaturePad) signaturePad.clear(); };
 
         // Check auth
         onAuthStateChanged(auth, (user) => {
@@ -1080,14 +1097,45 @@
             `;
 
             updateProgress(3);
+
+            // Initialize Signature Pad
+            setTimeout(() => {
+                const canvas = document.getElementById('signature-pad');
+                if (canvas && (!signaturePad || signaturePad.canvas !== canvas)) {
+                    // Handle High DPI
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+
+                    signaturePad = new SignaturePad(canvas, {
+                        minWidth: 1,
+                        maxWidth: 3,
+                        backgroundColor: 'rgb(255, 255, 255)'
+                    });
+                }
+            }, 300);
         };
 
         window.submitUnloading = async () => {
             const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.textContent;
+
+            // Validate Signature
+            if (!signaturePad || signaturePad.isEmpty()) {
+                alert("Please provide the farmer's signature.");
+                return;
+            }
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Uploading...';
 
             try {
+                // Upload Signature
+                const sigRef = ref(storage, `signatures/${Date.now()}_${selectedFarmer.id}.png`);
+                await uploadString(sigRef, signaturePad.toDataURL(), 'data_url');
+                const signatureUrl = await getDownloadURL(sigRef);
+
                 // Upload photos
                 const controllerPhotoUrl = await uploadPhoto(scannedData.controller.photo, 'controller');
                 const pumpPhotoUrl = await uploadPhoto(scannedData.pump.photo, 'pump');
@@ -1096,7 +1144,7 @@
                 const issuePhotoUrls = [];
                 for (const photo of scannedData.issues) {
                     const url = await uploadPhoto(photo, 'issues');
-                    issueUrls.push(url);
+                    issuePhotoUrls.push(url);
                 }
 
                 // Save to Firestore
@@ -1127,6 +1175,7 @@
                         photos: issuePhotoUrls,
                         notes: document.getElementById('unloadingNotes').value.trim() // Capture Notes
                     },
+                    signature: signatureUrl,
                     worker_email: currentUser.email,
                     timestamp: serverTimestamp(),
                     location_gps: null // Could add geo in future
@@ -1148,9 +1197,9 @@
                 window.location.href = 'home.html';
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error uploading: ' + error.message);
+                alert('Upload failed: ' + error.message);
                 submitBtn.disabled = false;
-                submitBtn.textContent = '✓ Confirm & Upload';
+                submitBtn.textContent = originalText;
             }
         };
 

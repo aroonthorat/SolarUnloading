@@ -313,7 +313,7 @@
     <div class="sidebar">
         <div class="logo">
             ☀️ SolarTrack PRO
-            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.16</div>
+            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.17</div>
         </div>
         <div class="nav-item active" onclick="showTab('dashboard')" id="nav-dashboard">📊 Dashboard</div>
         <div class="nav-item" onclick="showTab('upload')" id="nav-upload">📤 Upload Data</div>
@@ -337,8 +337,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.16
-                            (Excel Export)</span></h2>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.17
+                            (Digital Signatures)</span></h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
                 <div style="text-align:right;">
@@ -1351,6 +1351,35 @@
                     headStyles: { fillColor: [0, 123, 255] },
                     styles: { fontSize: 10, cellPadding: 3 }
                 });
+
+                y = doc.lastAutoTable.finalY + 15;
+
+                // SIGNATURE SECTION
+                if (unloadData && unloadData.signature) {
+                    // Check page break
+                    if (y + 40 > doc.internal.pageSize.height) { doc.addPage(); y = 20; }
+
+                    doc.setFontSize(12);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text("Authorized Signature:", 14, y);
+                    y += 5;
+
+                    try {
+                        const sigBase64 = await getBase64FromUrl(unloadData.signature);
+                        if (sigBase64) {
+                            doc.addImage(sigBase64, "PNG", 14, y, 60, 30);
+                            y += 35;
+                        } else {
+                            doc.setFontSize(10);
+                            doc.setTextColor(255, 0, 0);
+                            doc.text("(Signature Image Error - Click to View)", 14, y);
+                            doc.link(14, y - 5, 100, 10, { url: unloadData.signature });
+                            y += 10;
+                        }
+                    } catch (err) {
+                        console.warn("Signature load error", err);
+                    }
+                }
 
                 // PHOTOS SECTION
                 y = doc.lastAutoTable.finalY + 15;
