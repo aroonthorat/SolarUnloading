@@ -305,6 +305,17 @@
             border-left: 4px solid #667eea;
         }
 
+        #farmerSearchResults {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+            background: white;
+            min-height: 60px;
+            display: block;
+        }
+
         .farmer-item-name {
             font-weight: 600;
             color: #333;
@@ -371,10 +382,13 @@
             <h2>Select Farmer</h2>
 
             <div class="farmer-search-container">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span style="font-size:12px; color:#666;">👇 Click a name below to select it</span>
+                    <span id="dbStatus" style="font-size:12px; color:#666; cursor:pointer;" onclick="loadFarmers()">↻
+                        Check DB</span>
+                </div>
                 <input type="text" id="farmerSearch" placeholder="🔍 Type Name or Phone..."
                     onkeyup="filterFarmers(event)">
-                <div style="font-size:12px; color:#666; margin-top:5px; margin-bottom:5px;">👇 Click a name below to
-                    select it</div>
                 <div id="farmerSearchResults">
                     <div style="padding:20px; text-align:center; color:#999;">Loading farmers database...</div>
                 </div>
@@ -577,6 +591,8 @@
 
                 // DEBUG LOGS
                 console.log(`Debug: Found ${snapshot.size} docs from Firestore`);
+                const st = document.getElementById('dbStatus');
+                if (st) { st.textContent = `✅ DB: ${snapshot.size} records`; st.style.color = "green"; }
 
                 allFarmers = [];
                 let rejectedCount = 0;
@@ -586,21 +602,21 @@
 
                     // Super-Robust Name Normalization
                     // Check all probable keys including those with spaces
-                    let name = data.name || data.Name || data.NAME || 
-                               data.full_name || data.FULL_NAME || data['Full Name'] ||
-                               data.beneficiary_name || data.BENEFICIARY_NAME || data['Beneficiary Name'] || 
-                               data['Farmer Name'] || 
-                               '';
-                    
+                    let name = data.name || data.Name || data.NAME ||
+                        data.full_name || data.FULL_NAME || data['Full Name'] ||
+                        data.beneficiary_name || data.BENEFICIARY_NAME || data['Beneficiary Name'] ||
+                        data['Farmer Name'] ||
+                        '';
+
                     const nameUpper = String(name).toUpperCase();
 
                     // Filter out header rows/garbage data
                     if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
                         name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
                     }
-                    
+
                     // Fallback
-                    if (!name || name.length < 2) name = 'Unknown Farmer (' + doc.id.substr(0,4) + ')';
+                    if (!name || name.length < 2) name = 'Unknown Farmer (' + doc.id.substr(0, 4) + ')';
 
                     const location = data.location || data.Location || data.VILLAGE_NAME || data.VILLAGE || data.Village || data['Village Name'] || '';
                     const phone = data.phone || data.Phone || data.MOBILE_NO || data.Mobile || data['Mobile No'] || '';
@@ -632,6 +648,8 @@
 
             } catch (error) {
                 console.error('Error loading farmers:', error);
+                const st = document.getElementById('dbStatus');
+                if (st) { st.textContent = "❌ DB Error"; st.style.color = "red"; }
                 listContainer.innerHTML = `<div style="padding:20px; color:red; text-align:center;">
                     Error: ${error.message}<br>
                     <small>Check console permissions</small>
