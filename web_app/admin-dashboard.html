@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Upload Farmer List</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -311,7 +313,7 @@
     <div class="sidebar">
         <div class="logo">
             ☀️ SolarTrack PRO
-            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.11</div>
+            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.12</div>
         </div>
         <div class="nav-item active" onclick="showTab('dashboard')" id="nav-dashboard">📊 Dashboard</div>
         <div class="nav-item" onclick="showTab('upload')" id="nav-upload">📤 Upload Data</div>
@@ -335,8 +337,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.11
-                            (Stable)</span></h2>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.12
+                            (PDF Reports)</span></h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
                 <div style="text-align:right;">
@@ -653,10 +655,12 @@
             if (filtered.length === 0) { list.innerHTML = "<p>No matches.</p>"; return; }
 
             let html = '';
-            filtered.slice(0, 50).forEach(f => {
+            filtered.slice(0, 50).forEach((f, index) => {
                 const isChecked = window.selectedFarmers && window.selectedFarmers.has(f.id) ? 'checked' : '';
+                const serial = index + 1;
                 html += `<div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                      <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                        <span style="font-size:12px; color:#888; width:30px; font-mono:true;">#${serial}</span>
                         <input type="checkbox" onchange="toggleSelect('${f.id}')" ${isChecked} style="width:18px; height:18px; cursor:pointer;">
                         <div>
                              <div style="font-weight:bold; font-size:16px;">${f.name} <span style="font-weight:normal; font-size:12px; color:#555; background:#eee; padding:2px 6px; border-radius:4px; margin-left:5px;">${f.beneficiaryNo || f.id}</span></div>
@@ -664,20 +668,21 @@
                                 📍 ${f.VILLAGE_NAME || f.location} ${f.TALUKA_NAME ? ', ' + f.TALUKA_NAME : ''} ${f.PIN_CODE ? '- ' + f.PIN_CODE : ''}
                              </div>
                              <div style="color:#777; font-size:12px; margin-top:2px;">
-                                ⚡ Pump Load: <strong>${f.hp || f.PUMP_LOAD} HP</strong> &nbsp;|&nbsp; 📞 ${f.phone || '-'}
+                                ⚡ Pump: <strong>${f.hp || f.PUMP_LOAD} HP</strong> &nbsp;|&nbsp; 📞 ${f.phone || '-'}
                              </div>
                         </div>
                      </div>
                      <div style="display:flex; align-items:center; gap:10px;">
                         <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status.toUpperCase()}</span>
                         <div>
+                            <button class="action-btn" onclick="window.generateFarmerPDF('${f.id}')" style="background:#fff3e0; color:#ef6c00; border:1px solid #ffe0b2; margin-right:5px;" title="Download Report">📄 PDF</button>
                             <button class="action-btn btn-edit" onclick="window.editFarmer('${f.id}')">✏️</button>
                             <button class="action-btn btn-delete" onclick="window.deleteFarmer('${f.id}')">🗑️</button>
                         </div>
                      </div>
                  </div>`;
             });
-            if (filtered.length > 50) html += `<div style="padding:10px;text-align:center;color:#999;">+ ${filtered.length - 50} more (use search)</div>`;
+            if (filtered.length > 50) html += `<div style="padding:10px;text-align:center;color:#999;">+ ${filtered.length - 50} more (use search to find)</div>`;
             list.innerHTML = html;
         };
 
@@ -1130,6 +1135,136 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Farmers");
             XLSX.writeFile(wb, "Template.xlsx");
+        };
+
+        // --- PDF GENERATION ---
+        window.generateFarmerPDF = async (farmerId) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Toast
+            const toast = document.createElement('div');
+            toast.innerText = "Generating PDF...";
+            toast.style.cssText = "position:fixed;top:20px;right:20px;padding:15px;background:#333;color:white;z-index:9999;border-radius:5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);";
+            document.body.appendChild(toast);
+
+            try {
+                // Fetch Data
+                const farmer = window.allFarmersData.find(f => f.id === farmerId);
+                const unloadQ = query(collection(db, 'unloading_records'), where('farmer_id', '==', farmerId));
+                const installQ = query(collection(db, 'installation_records'), where('farmer_id', '==', farmerId));
+
+                const [unloadSnap, installSnap] = await Promise.all([getDocs(unloadQ), getDocs(installQ)]);
+                const unloadData = unloadSnap.empty ? null : unloadSnap.docs[0].data();
+                const installData = installSnap.empty ? null : installSnap.docs[0].data();
+
+                // Header
+                doc.setFontSize(22);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Farmer Status Report", 14, 20);
+
+                // Farmer Details Box
+                doc.setFillColor(245, 245, 245);
+                doc.rect(14, 25, 180, 35, 'F');
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+
+                doc.text(`Name:`, 18, 32); doc.setFont("helvetica", "bold"); doc.text(farmer.name, 45, 32); doc.setFont("helvetica", "normal");
+                doc.text(`Beneficiary:`, 18, 38); doc.text(farmer.beneficiaryNo || farmer.id, 45, 38);
+                doc.text(`Village:`, 18, 44); doc.text(farmer.location || '-', 45, 44);
+                doc.text(`Mobile:`, 18, 50); doc.text(farmer.phone || '-', 45, 50);
+                doc.text(`Pump:`, 120, 32); doc.text(`${farmer.hp || farmer.PUMP_LOAD || '-'} HP`, 140, 32);
+
+                let y = 70;
+
+                // UNLOADING TABLE
+                doc.setFontSize(14);
+                doc.setTextColor(0, 100, 0); // Green
+                doc.text("Unloading Status", 14, y);
+                y += 5;
+
+                const uRows = [];
+                if (unloadData) {
+                    uRows.push(["Status", "Successfully Unloaded ✅"]);
+                    uRows.push(["Completed On", unloadData.timestamp ? new Date(unloadData.timestamp.seconds * 1000).toLocaleString() : "-"]);
+                    uRows.push(["Worker", `${unloadData.unloaded_by_name || '-'} (${unloadData.worker_email || '-'})`]);
+                    uRows.push(["Material QRs", `Controller: ${unloadData.controller?.qr || '-'}\nPanel: ${unloadData.panels?.qr || '-'}\nPump: ${unloadData.pump?.qr || '-'}`]);
+                } else {
+                    uRows.push(["Status", "Pending ⚠️"]);
+                }
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Field', 'Details']],
+                    body: uRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [40, 167, 69] },
+                    styles: { fontSize: 10, cellPadding: 3 }
+                });
+
+                y = doc.lastAutoTable.finalY + 15;
+
+                // INSTALLATION TABLE
+                doc.setFontSize(14);
+                doc.setTextColor(0, 86, 179); // Blue
+                doc.text("Installation Status", 14, y);
+                y += 5;
+
+                const iRows = [];
+                if (installData) {
+                    iRows.push(["Status", "Installation Complete ✅"]);
+                    iRows.push(["Completed On", installData.timestamp ? new Date(installData.timestamp.seconds * 1000).toLocaleString() : "-"]);
+                    iRows.push(["Worker", `${installData.installed_by_name || '-'} (${installData.worker_email || '-'})`]);
+                } else {
+                    iRows.push(["Status", "Pending ⚠️"]);
+                }
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Field', 'Details']],
+                    body: iRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 123, 255] },
+                    styles: { fontSize: 10, cellPadding: 3 }
+                });
+
+                // PHOTOS (Links)
+                y = doc.lastAutoTable.finalY + 15;
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text("Photo Evidence (Click to View Online)", 14, y);
+                y += 8;
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 255);
+
+                const addLink = (label, url) => {
+                    if (!url) return;
+                    doc.textWithLink(`🔗 ${label}`, 14, y, { url: url });
+                    y += 6;
+                };
+
+                if (unloadData && unloadData.photos) {
+                    const photos = Array.isArray(unloadData.photos) ? unloadData.photos : [unloadData.photos];
+                    photos.forEach((url, i) => addLink(`Unloading Photo ${i + 1}`, url));
+                }
+                if (installData && installData.photos) {
+                    const photos = Array.isArray(installData.photos) ? installData.photos : [installData.photos];
+                    photos.forEach((url, i) => addLink(`Installation Photo ${i + 1}`, url));
+                }
+
+                if (!unloadData?.photos && !installData?.photos) {
+                    doc.setTextColor(100, 100, 100);
+                    doc.text("(No photos uploaded)", 14, y);
+                }
+
+                doc.save(`${farmer.name.replace(/\s+/g, '_')}_Report.pdf`);
+
+            } catch (e) {
+                console.error(e);
+                alert("Error: " + e.message);
+            } finally {
+                document.body.removeChild(toast);
+            }
         };
 
     </script>
