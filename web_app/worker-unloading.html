@@ -591,13 +591,20 @@
             listContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Loading database...</div>';
 
             try {
-                // Fetch ALL farmers
-                const snapshot = await getDocs(collection(db, 'farmers_master'));
+                // Fetch ALL farmers with 15s timeout
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Network Timeout (15s)")), 15000));
+
+                // OPTIMIZATION: If list is massive, we should paginate. 
+                // But for <5000, fetching all is okay.
+                const snapshot = await Promise.race([
+                    getDocs(collection(db, 'farmers_master')),
+                    timeoutPromise
+                ]);
 
                 // DEBUG LOGS
                 console.log(`Debug: Found ${snapshot.size} docs from Firestore`);
                 const st = document.getElementById('dbStatus');
-                if (st) { st.textContent = `✅ DB: ${snapshot.size} records`; st.style.color = "green"; }
+                if (st) { st.textContent = `✅ DB: ${snapshot.size}`; st.style.color = "green"; }
 
                 allFarmers = [];
                 let rejectedCount = 0;
@@ -700,7 +707,9 @@
             const filtered = allFarmers.filter(f =>
                 (f.name || '').toLowerCase().includes(term) ||
                 (f.phone || '').includes(term) ||
-                (f.location || '').toLowerCase().includes(term)
+                (f.location || '').toLowerCase().includes(term) ||
+                (f.id || '').toLowerCase().includes(term) ||
+                (f.BENEFICIARY_NO || '').toLowerCase().includes(term)
             );
 
             // Auto-select on Enter

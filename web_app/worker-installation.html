@@ -444,7 +444,12 @@
             listContainer.style.display = 'block';
 
             try {
-                const snapshot = await getDocs(collection(db, 'farmers_master'));
+                // Fetch with timeout
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Network Timeout (15s)")), 15000));
+                const snapshot = await Promise.race([
+                    getDocs(collection(db, 'farmers_master')),
+                    timeoutPromise
+                ]);
 
                 allFarmers = [];
                 let readyCount = 0;
@@ -531,7 +536,9 @@
             const filtered = allFarmers.filter(f =>
                 (f.name || '').toLowerCase().includes(term) ||
                 (f.phone || '').includes(term) ||
-                (f.location || '').toLowerCase().includes(term)
+                (f.location || '').toLowerCase().includes(term) ||
+                (f.id || '').toLowerCase().includes(term) ||
+                (f.BENEFICIARY_NO || '').toLowerCase().includes(term)
             );
 
             if (e && e.key === 'Enter' && filtered.length > 0) {
