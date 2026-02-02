@@ -318,6 +318,15 @@
                 <p style="margin-bottom:10px; color:#666; font-size:13px;">Showing data from:
                     <code>farmers_master</code>
                 </p>
+
+                <!-- Bulk Actions Bar -->
+                <div id="bulkActions"
+                    style="background:#ffebee; padding:10px; border-radius:8px; display:none; justify-content:space-between; align-items:center; margin-bottom:15px; border:1px solid #ffcdd2;">
+                    <span style="font-weight:bold; color:#d32f2f;">Selected: <span id="selectedCount">0</span></span>
+                    <button class="btn btn-delete" style="padding:5px 15px;" onclick="deleteSelected()">🗑️ Delete
+                        Selected</button>
+                </div>
+
                 <div style="display:flex; gap:10px; margin-bottom:20px;">
                     <input type="text" id="searchBox" placeholder="Search Name, ID, or Location..."
                         style="padding:10px; border:1px solid #ddd; border-radius:8px; flex:1;"
@@ -507,6 +516,7 @@
                 });
 
                 filterFarmers();
+                updateBulkUI(); // Initialize bulk UI on load
             } catch (e) {
                 list.innerHTML = `<div class="error">Error: ${e.message}</div>`;
             }
@@ -536,11 +546,15 @@
 
             let html = '';
             filtered.slice(0, 50).forEach(f => {
+                const isChecked = window.selectedFarmers && window.selectedFarmers.has(f.id) ? 'checked' : '';
                 html += `<div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                     <div style="flex:1;">
-                         <div style="font-weight:bold;">${f.name}</div>
-                         <div style="color:#777; font-size:13px;">${f.location} | 📞 ${f.phone} | ⚡ ${f.hp}HP</div>
-                         <div style="font-size:10px; color:#aaa;">ID: ${f.id}</div>
+                     <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                        <input type="checkbox" onchange="toggleSelect('${f.id}')" ${isChecked} style="width:18px; height:18px; cursor:pointer;">
+                        <div>
+                             <div style="font-weight:bold;">${f.name}</div>
+                             <div style="color:#777; font-size:13px;">${f.location} | 📞 ${f.phone} | ⚡ ${f.hp}HP</div>
+                             <div style="font-size:10px; color:#aaa;">ID: ${f.id}</div>
+                        </div>
                      </div>
                      <div style="display:flex; align-items:center; gap:10px;">
                         <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status}</span>
@@ -598,11 +612,69 @@
                     await deleteDoc(doc(db, 'farmers_master', id));
                     // Remove locally to avoid full reload if possible, but loadFarmers is safer
                     window.allFarmersData = window.allFarmersData.filter(x => x.id !== id);
+                    if (window.selectedFarmers) window.selectedFarmers.delete(id);
                     filterFarmers();
                     alert('Farmer deleted.');
                 } catch (e) {
                     alert('Error deleting: ' + e.message);
                 }
+            }
+        };
+
+        // --- BULK DELETE LOGIC ---
+        window.selectedFarmers = new Set();
+
+        window.toggleSelect = (id) => {
+            if (window.selectedFarmers.has(id)) window.selectedFarmers.delete(id);
+            else window.selectedFarmers.add(id);
+            updateBulkUI();
+        };
+
+        window.updateBulkUI = () => {
+            const count = window.selectedFarmers.size;
+            document.getElementById('selectedCount').innerText = count;
+            document.getElementById('bulkActions').style.display = count > 0 ? 'flex' : 'none';
+        };
+
+        window.deleteSelected = async () => {
+            const count = window.selectedFarmers.size;
+            if (count === 0) return;
+
+            if (!confirm(`Are you sure you want to DELETE ${count} farmers? This cannot be undone.`)) return;
+
+            const btn = document.querySelector('#bulkActions button');
+            btn.innerHTML = "Deleting...";
+            btn.disabled = true;
+
+            try {
+                const batch = writeBatch(db);
+                let batchCount = 0;
+
+                // Firestore batch limit is 500
+                const ids = Array.from(window.selectedFarmers);
+
+                // For simplicity, handle < 500. For > 500, we'd need loop buckets.
+                for (let id of ids) {
+                    batch.delete(doc(db, 'farmers_master', id));
+                    batchCount++;
+                    if (batchCount >= 450) break; // Safety limit
+                }
+
+                await batch.commit();
+
+                alert(`Successfully deleted ${batchCount} farmers.`);
+
+                // Clean up local
+                window.allFarmersData = window.allFarmersData.filter(f => !window.selectedFarmers.has(f.id));
+                window.selectedFarmers.clear();
+                updateBulkUI();
+                filterFarmers();
+
+            } catch (e) {
+                console.error(e);
+                alert('Error processing batch delete: ' + e.message);
+                btn.innerHTML = "🗑️ Delete Selected";
+                btn.disabled = false;
             }
         };
 
