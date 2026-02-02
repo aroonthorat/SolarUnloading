@@ -453,26 +453,26 @@
                     const phone = data.phone || data.Phone || data.MOBILE_NO || '';
                     const hp = data.hp || data.HP || data.PUMP_LOAD || '';
 
-                    let unloadStatus = (data.unloading_status || 'pending').toLowerCase();
-                    let installStatus = (data.installation_status || 'pending').toLowerCase();
+                    // Show everyone, but mark as ready/not ready
+                    const isReady = (unloadStatus === 'done');
 
-                    // Only show farmers who have completed unloading
-                    if (unloadStatus === 'done') {
-                        allFarmers.push({
-                            id: doc.id,
-                            name: name.trim(), location, phone, hp,
-                            installStatus,
-                            ...data
-                        });
-                        readyCount++;
-                    }
+                    allFarmers.push({
+                        id: doc.id,
+                        name: name.trim(), location, phone, hp,
+                        installStatus,
+                        unloadStatus,
+                        isReady,
+                        ...data
+                    });
+
+                    if (isReady) readyCount++;
                 });
 
-                console.log(`Loaded ${allFarmers.length} ready farmers.`);
+                console.log(`Loaded ${allFarmers.length} total farmers (${readyCount} ready).`);
                 renderFarmerList(allFarmers.slice(0, 50));
 
                 if (allFarmers.length === 0) {
-                    listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No farmers ready for installation.<br><small>(Must complete Unloading first)</small></div>';
+                    listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No farmers found in database.</div>';
                 }
 
             } catch (error) {
@@ -547,8 +547,8 @@
                 <button class="btn" style="background:#e3f2fd; color:#0d47a1; margin-bottom:15px;" onclick="viewUnloadingDetails('${selectedFarmer.id}')">
                     ℹ️ View Unloading Photos & Info
                 </button>
-                <button class="btn btn-primary" onclick="startInstallation()">
-                    ${farmer.installStatus === 'done' ? '⚠️ Re-Log Custom' : 'Start Installation'}
+                <button class="btn btn-primary" onclick="startInstallation()" ${!selectedFarmer.isReady ? 'disabled style="opacity:0.6; cursor:not-allowed;"' : ''}>
+                    ${!selectedFarmer.isReady ? 'Finish Unloading First' : (selectedFarmer.installStatus === 'done' ? '⚠️ Re-Log Custom' : 'Start Installation')}
                 </button>
             `;
         };
