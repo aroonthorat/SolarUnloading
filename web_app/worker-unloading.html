@@ -598,15 +598,13 @@
                     let status = data.unloading_status || 'pending';
                     status = String(status).toLowerCase().trim();
 
-                    if (status === 'pending' || status === 'in_progress') {
-                        allFarmers.push({
-                            id: doc.id,
-                            name: name.trim(), location, phone, hp,
-                            ...data
-                        });
-                    } else {
-                        rejectedCount++;
-                    }
+                    // Add everyone, but flag status
+                    allFarmers.push({
+                        id: doc.id,
+                        name: name.trim(), location, phone, hp,
+                        unloading_status: status,
+                        ...data
+                    });
                 });
 
                 console.log(`Debug: Loaded ${allFarmers.length} valid pending farmers. Rejected ${rejectedCount}.`);
@@ -639,10 +637,16 @@
             }
 
             list.forEach(farmer => {
+                const isDone = farmer.unloading_status === 'done';
                 const div = document.createElement('div');
                 div.className = 'farmer-list-item';
+                if(isDone) div.style.backgroundColor = '#f8f9fa';
+                
                 div.innerHTML = `
-                     <div class="farmer-item-name">${farmer.name}</div>
+                     <div class="farmer-item-name" style="${isDone ? 'color:#666;' : ''}">
+                        ${farmer.name}
+                        ${isDone ? '<span style="font-size:12px; background:#d4edda; color:#155724; padding:2px 6px; border-radius:4px; margin-left:5px;">✅ Done</span>' : ''}
+                     </div>
                      <div class="farmer-item-meta">
                          📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
                      </div>
@@ -696,10 +700,19 @@
 
             // Enable Next Button
             const btn = document.getElementById('startScanBtn');
+            const isDone = selectedFarmer.unloading_status === 'done';
+            
             btn.disabled = false;
             btn.style.opacity = '1';
             btn.style.cursor = 'pointer';
-            btn.innerHTML = "Start Scanning for " + (selectedFarmer.name.split(' ')[0] || "Farmer");
+            
+            if (isDone) {
+                btn.innerHTML = "⚠️ Re-Scan " + (selectedFarmer.name.split(' ')[0] || "Farmer");
+                btn.style.background = '#f0ad4e'; // Warning color
+            } else {
+                btn.innerHTML = "Start Scanning for " + (selectedFarmer.name.split(' ')[0] || "Farmer");
+                btn.style.background = ''; // Reset to default CSS
+            }
         };
 
         window.clearSelection = () => {
