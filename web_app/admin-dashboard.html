@@ -563,41 +563,98 @@
                         }
                     }
 
-                    const headers = rows[headerIdx].map(x => String(x).toLowerCase());
+                    const headers = rows[headerIdx].map(x => String(x).toLowerCase().trim());
                     console.log("Headers detected:", headers);
 
-                    // Map Columns
-                    nameIdx = headers.findIndex(h => isRefName(h));
-                    // Fallback for name if strict check fails: look for ANY 'name' that isn't empty, preferring 'beneficiary'
-                    if (nameIdx === -1) nameIdx = headers.findIndex(h => h.includes('beneficiary'));
-                    if (nameIdx === -1) nameIdx = headers.findIndex(h => h.includes('name') && !h.includes('division'));
+                    // Smart Column Mapper - finds index by multiple possible names
+                    const findCol = (...keywords) => {
+                        return headers.findIndex(h => keywords.some(k => h.includes(k.toLowerCase())));
+                    };
 
-                    const locIdx = headers.findIndex(h => h.includes('village') || h.includes('location') || h.includes('circle'));
-                    const phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('mobile'));
-                    const hpIdx = headers.findIndex(h => h.includes('hp') || h.includes('load'));
+                    // Map ALL required columns
+                    const colMap = {
+                        // Core Identification
+                        beneficiaryNo: findCol('beneficiary_no', 'beneficiary no', 'ben no', 'farmer id'),
+                        beneficiaryName: findCol('beneficiary_name', 'beneficiary name', 'farmer name', 'name'),
+                        mobileNo: findCol('mobile_no', 'mobile no', 'phone', 'contact', 'mobile'),
 
-                    console.log(`Mapped: Name=${nameIdx}, Loc=${locIdx}, Phone=${phoneIdx}`);
+                        // Location Hierarchy
+                        divisionName: findCol('division_name', 'division name', 'division'),
+                        subdivisionName: findCol('subdivision_name', 'subdivision name', 'subdivision', 'sub division'),
+                        talukaName: findCol('taluka_name', 'taluka name', 'taluka', 'taluk'),
+                        villageName: findCol('village_name', 'village name', 'village'),
+                        pinCode: findCol('pin_code', 'pin code', 'pincode', 'pin'),
 
-                    if (nameIdx === -1) throw new Error("Could not find a 'Name' or 'Beneficiary Name' column. Please check your Excel headers.");
+                        // Technical Details
+                        pumpLoad: findCol('pump_load', 'pump load', 'hp', 'load', 'capacity'),
+                        needMonopole: findCol('need_monopole', 'need monopole', 'monopole required'),
+                        monopoleHeight: findCol('monopole_height', 'monopole height', 'height'),
+                        needBoosterPump: findCol('need_booster_pump', 'need booster', 'booster required'),
+                        boosterCapacity: findCol('booster_capacity', 'booster capacity'),
+
+                        // Dates & Admin
+                        vendorSelectionDate: findCol('vendor_selection_date', 'vendor selection', 'selection date'),
+                        jsrApprRejDt: findCol('jsr_appr_rej_dt', 'jsr date', 'approval date', 'rejection date'),
+                        jsrRejReason: findCol('jsr_rej_reason', 'jsr reason', 'rejection reason')
+                    };
+
+                    console.log('Column Mapping:', colMap);
+
+                    // Validate critical fields
+                    if (colMap.beneficiaryName === -1) {
+                        throw new Error("Could not find 'BENEFICIARY_NAME' column. Please check your Excel headers.");
+                    }
 
                     stagingData = [];
                     for (let i = headerIdx + 1; i < rows.length; i++) {
                         const r = rows[i];
-                        if (!r || !r[nameIdx]) continue;
+                        if (!r || !r[colMap.beneficiaryName]) continue;
 
-                        // Exclude if it looks like a header (contains 'Name')
-                        if (String(r[nameIdx]).toLowerCase().includes('name')) continue;
+                        // Skip header-like rows
+                        const nameVal = String(r[colMap.beneficiaryName]).trim();
+                        if (!nameVal || nameVal.toLowerCase().includes('beneficiary') || nameVal.toLowerCase().includes('name')) continue;
 
-                        stagingData.push({
-                            FULL_NAME: r[nameIdx], // Store as FULL_NAME to match existing schema mostly
-                            name: r[nameIdx],     // Also store as name for simpler querying
-                            location: r[locIdx] || '',
-                            phone: r[phoneIdx] || '',
-                            hp: r[hpIdx] || '',
+                        // Build complete record
+                        const record = {
+                            // Core Fields (standardized for app)
+                            BENEFICIARY_NO: r[colMap.beneficiaryNo] || '',
+                            BENEFICIARY_NAME: nameVal,
+                            MOBILE_NO: r[colMap.mobileNo] || '',
+
+                            // Also store as lowercase for compatibility
+                            name: nameVal,
+                            phone: r[colMap.mobileNo] || '',
+                            beneficiaryNo: r[colMap.beneficiaryNo] || '',
+
+                            // Location Hierarchy
+                            DIVISION_NAME: r[colMap.divisionName] || '',
+                            SUBDIVISION_NAME: r[colMap.subdivisionName] || '',
+                            TALUKA_NAME: r[colMap.talukaName] || '',
+                            VILLAGE_NAME: r[colMap.villageName] || '',
+                            PIN_CODE: r[colMap.pinCode] || '',
+                            location: r[colMap.villageName] || r[colMap.talukaName] || '', // Fallback for display
+
+                            // Technical
+                            PUMP_LOAD: r[colMap.pumpLoad] || '',
+                            hp: r[colMap.pumpLoad] || '', // Backwards compat
+                            NEED_MONOPOLE: r[colMap.needMonopole] || '',
+                            MONOPOLE_HEIGHT: r[colMap.monopoleHeight] || '',
+                            NEED_BOOSTER_PUMP: r[colMap.needBoosterPump] || '',
+                            BOOSTER_CAPACITY: r[colMap.boosterCapacity] || '',
+
+                            // Dates & Admin
+                            VENDOR_SELECTION_DATE: r[colMap.vendorSelectionDate] || '',
+                            JSR_APPR_REJ_DT: r[colMap.jsrApprRejDt] || '',
+                            JSR_REJ_REASON: r[colMap.jsrRejReason] || '',
+
+                            // Status & Metadata
                             unloading_status: 'pending',
                             installation_status: 'pending',
-                            createdAt: new Date()
-                        });
+                            createdAt: new Date(),
+                            importedAt: new Date()
+                        };
+
+                        stagingData.push(record);
                     }
 
                     // Render Staging
