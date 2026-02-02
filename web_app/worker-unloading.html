@@ -371,15 +371,18 @@
             <h2>Select Farmer</h2>
 
             <div class="farmer-search-container">
-                <input type="text" id="farmerSearch" placeholder="🔍 Type Name, Phone or ID..."
-                    onkeyup="filterFarmers()">
+                <input type="text" id="farmerSearch" placeholder="🔍 Type Name or Phone..."
+                    onkeyup="filterFarmers(event)">
+                <div style="font-size:12px; color:#666; margin-top:5px; margin-bottom:5px;">👇 Click a name below to
+                    select it</div>
                 <div id="farmerSearchResults">
                     <div style="padding:20px; text-align:center; color:#999;">Loading farmers database...</div>
                 </div>
             </div>
 
             <div id="farmerInfo" class="hidden"></div>
-            <button class="btn btn-primary" id="startScanBtn" onclick="startScanning()" disabled>
+            <button class="btn btn-primary" id="startScanBtn" onclick="startScanning()"
+                style="opacity:1; cursor:pointer;">
                 Start Scanning Materials
             </button>
         </div>
@@ -640,8 +643,8 @@
                 const isDone = farmer.unloading_status === 'done';
                 const div = document.createElement('div');
                 div.className = 'farmer-list-item';
-                if(isDone) div.style.backgroundColor = '#f8f9fa';
-                
+                if (isDone) div.style.backgroundColor = '#f8f9fa';
+
                 div.innerHTML = `
                      <div class="farmer-item-name" style="${isDone ? 'color:#666;' : ''}">
                         ${farmer.name}
@@ -660,13 +663,21 @@
             container.style.display = 'block';
         };
 
-        window.filterFarmers = () => {
+        window.filterFarmers = (e) => {
             const term = document.getElementById('farmerSearch').value.toLowerCase();
             const filtered = allFarmers.filter(f =>
                 (f.name || '').toLowerCase().includes(term) ||
                 (f.phone || '').includes(term) ||
                 (f.location || '').toLowerCase().includes(term)
             );
+
+            // Auto-select on Enter
+            if (e && e.key === 'Enter' && filtered.length > 0) {
+                selectFarmer(filtered[0]);
+                document.getElementById('farmerSearch').blur(); // Close keyboard
+                return;
+            }
+
             // Show top 20 matches
             renderFarmerList(filtered.slice(0, 20));
         };
@@ -701,11 +712,11 @@
             // Enable Next Button
             const btn = document.getElementById('startScanBtn');
             const isDone = selectedFarmer.unloading_status === 'done';
-            
+
             btn.disabled = false;
             btn.style.opacity = '1';
             btn.style.cursor = 'pointer';
-            
+
             if (isDone) {
                 btn.innerHTML = "⚠️ Re-Scan " + (selectedFarmer.name.split(' ')[0] || "Farmer");
                 btn.style.background = '#f0ad4e'; // Warning color
@@ -726,6 +737,13 @@
         };
 
         window.startScanning = () => {
+            if (!selectedFarmer) {
+                alert("Please select a farmer from the list first! 👇");
+                // Shake animation or highlight list
+                document.getElementById('farmerSearch').focus();
+                return;
+            }
+
             document.getElementById('selectFarmerStep').classList.add('hidden');
             document.getElementById('scanMaterialsStep').classList.remove('hidden');
 
