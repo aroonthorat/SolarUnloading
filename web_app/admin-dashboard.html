@@ -313,7 +313,7 @@
     <div class="sidebar">
         <div class="logo">
             ☀️ SolarTrack PRO
-            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.12</div>
+            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.13</div>
         </div>
         <div class="nav-item active" onclick="showTab('dashboard')" id="nav-dashboard">📊 Dashboard</div>
         <div class="nav-item" onclick="showTab('upload')" id="nav-upload">📤 Upload Data</div>
@@ -337,8 +337,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.12
-                            (PDF Reports)</span></h2>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.13
+                            (PDF Fixed)</span></h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
                 <div style="text-align:right;">
@@ -1243,16 +1243,34 @@
                     y += 6;
                 };
 
-                if (unloadData && unloadData.photos) {
-                    const photos = Array.isArray(unloadData.photos) ? unloadData.photos : [unloadData.photos];
-                    photos.forEach((url, i) => addLink(`Unloading Photo ${i + 1}`, url));
-                }
-                if (installData && installData.photos) {
-                    const photos = Array.isArray(installData.photos) ? installData.photos : [installData.photos];
-                    photos.forEach((url, i) => addLink(`Installation Photo ${i + 1}`, url));
+                let photoCount = 0;
+
+                // Extract Unloading Photos
+                if (unloadData) {
+                    if (unloadData.controller?.photo) { addLink("[Unloading] Controller Photo", unloadData.controller.photo); photoCount++; }
+                    if (unloadData.pump?.photo) { addLink("[Unloading] Pump Photo", unloadData.pump.photo); photoCount++; }
+                    if (unloadData.panels?.photo) { addLink("[Unloading] Panels Photo", unloadData.panels.photo); photoCount++; }
+
+                    if (unloadData.issues?.photos && Array.isArray(unloadData.issues.photos)) {
+                        unloadData.issues.photos.forEach((url, i) => {
+                            addLink(`[Unloading] Issue Photo ${i + 1}`, url);
+                            photoCount++;
+                        });
+                    }
                 }
 
-                if (!unloadData?.photos && !installData?.photos) {
+                // Extract Installation Photos
+                if (installData) {
+                    const photos = installData.photos || installData.photoUrls || installData.images || [];
+                    if (Array.isArray(photos)) {
+                        photos.forEach((url, i) => {
+                            addLink(`[Installation] Photo ${i + 1}`, url);
+                            photoCount++;
+                        });
+                    }
+                }
+
+                if (photoCount === 0) {
                     doc.setTextColor(100, 100, 100);
                     doc.text("(No photos uploaded)", 14, y);
                 }
