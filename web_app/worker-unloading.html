@@ -566,20 +566,25 @@
         async function loadFarmers() {
             const listContainer = document.getElementById('farmerSearchResults');
             listContainer.style.display = 'block';
+            listContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Loading database...</div>';
 
             try {
-                // Fetch ALL farmers from to handle large list locally
+                // Fetch ALL farmers
                 const snapshot = await getDocs(collection(db, 'farmers_master'));
 
+                // DEBUG LOGS
+                console.log(`Debug: Found ${snapshot.size} docs from Firestore`);
+
                 allFarmers = [];
+                let rejectedCount = 0;
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
-                    // Smart Normalize Name (detect bad zone/division data)
+                    // Smart Normalize Name
                     let name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || '';
                     const nameUpper = String(name).toUpperCase();
 
-                    // If name is actually a ZONE/DIVISION/CIRCLE, use BENEFICIARY_NAME instead
                     if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
                         name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
                     }
@@ -591,7 +596,7 @@
 
                     // Robust Status Check
                     let status = data.unloading_status || 'pending';
-                    status = status.toLowerCase();
+                    status = String(status).toLowerCase().trim();
 
                     if (status === 'pending' || status === 'in_progress') {
                         allFarmers.push({
@@ -599,19 +604,28 @@
                             name: name.trim(), location, phone, hp,
                             ...data
                         });
+                    } else {
+                        rejectedCount++;
                     }
                 });
 
-                // Keep only top 50 initially to be fast
+                console.log(`Debug: Loaded ${allFarmers.length} valid pending farmers. Rejected ${rejectedCount}.`);
+
                 renderFarmerList(allFarmers.slice(0, 50));
 
                 if (allFarmers.length === 0) {
-                    listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No pending unloads found. Good job!</div>';
+                    listContainer.innerHTML = `<div style="padding:20px; text-align:center;">
+                        No pending unloads found.<br>
+                        <small style="color:#999">(Found ${snapshot.size} in DB, ${rejectedCount} hidden/done)</small>
+                    </div>`;
                 }
 
             } catch (error) {
                 console.error('Error loading farmers:', error);
-                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error loading database: ' + error.message + '</div>';
+                listContainer.innerHTML = `<div style="padding:20px; color:red; text-align:center;">
+                    Error: ${error.message}<br>
+                    <small>Check console permissions</small>
+                </div>`;
             }
         }
 
