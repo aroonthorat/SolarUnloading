@@ -327,7 +327,9 @@
                         Selected</button>
                 </div>
 
-                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+                    <button class="btn" onclick="toggleSelectAll()" style="padding:10px; background:#e0e0e0;">✅ Select
+                        All</button>
                     <input type="text" id="searchBox" placeholder="Search Name, ID, or Location..."
                         style="padding:10px; border:1px solid #ddd; border-radius:8px; flex:1;"
                         onkeyup="filterFarmers()">
@@ -527,7 +529,7 @@
             const status = document.getElementById('statusFilter').value;
 
             // Normalize & Filter
-            const filtered = window.allFarmersData.filter(f => {
+            window.currentFilteredData = window.allFarmersData.filter(f => {
                 const matchTerm = (f.name || '').toLowerCase().includes(term) ||
                     (f.location || '').toLowerCase().includes(term) ||
                     (f.phone || '').includes(term) ||
@@ -540,6 +542,8 @@
 
                 return matchTerm && matchStatus;
             });
+
+            const filtered = window.currentFilteredData;
 
             const list = document.getElementById('farmersList');
             if (filtered.length === 0) { list.innerHTML = "<p>No matches.</p>"; return; }
@@ -628,6 +632,20 @@
             if (window.selectedFarmers.has(id)) window.selectedFarmers.delete(id);
             else window.selectedFarmers.add(id);
             updateBulkUI();
+        };
+
+        window.toggleSelectAll = () => {
+            const allSelected = window.currentFilteredData.every(f => window.selectedFarmers.has(f.id));
+
+            if (allSelected) {
+                // Deselect current view
+                window.currentFilteredData.forEach(f => window.selectedFarmers.delete(f.id));
+            } else {
+                // Select all in current view
+                window.currentFilteredData.forEach(f => window.selectedFarmers.add(f.id));
+            }
+            updateBulkUI();
+            filterFarmers(); // Re-render logic to show checkboxes checked
         };
 
         window.updateBulkUI = () => {
