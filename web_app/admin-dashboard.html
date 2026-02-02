@@ -256,25 +256,26 @@
     </div>
 
     <div class="main-content">
-        <div class="header">
-            <div>
-                <h1>Admin Dashboard <span
-                        style="font-size:14px; background:#e0e0e0; padding:4px 8px; border-radius:12px; vertical-align:middle;">v2.2
-                        (Schema Fix)</span></h1>
-                <p id="userName" style="color:#666;">Welcome back</p>
-            </div>
-        </div>
+
 
         <div id="success" class="success"></div>
         <div id="error" class="error"></div>
 
         <!-- Dashboard Tab -->
         <div id="dashboard-tab" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalFarmers">...</div>
-                    <div class="stat-label">Total Farmers</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <div>
+                    <h2 style="color:#333;">Admin Dashboard <span
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.0
+                            (Smart Mapper)</span></h2>
+                    <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
+                <div style="text-align:right;">
+                    <div style="font-size:24px; font-weight:bold; color:#333;" id="totalFarmers">0</div>
+                    <div style="font-size:12px; color:#777;">Total Farmers</div>
+                </div>
+            </div>
+            <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="unloadingPending" style="color:#f0ad4e">0</div>
                     <div class="stat-label">Pending Unload</div>
@@ -298,9 +299,10 @@
         <div id="upload-tab" class="tab-content">
             <div class="card">
                 <h2>Upload Farmer List (Excel/CSV)</h2>
-                <p>Ensure columns include: <strong>Full Name</strong> (or Beneficiary Name), Location, Phone, HP.</p>
-                <p style="color:red; font-size:13px; margin-top:5px;">⚠️ Note: 'Division' or 'Zone' columns will be
-                    ignored for names.</p>
+                <p>Upload your master list. You will be asked to <strong style="color:#667eea;">select the correct
+                        columns</strong> for Name, Phone, and Village in the next step.</p>
+                <p style="color:green; font-size:13px; margin-top:5px;">✅ New: Smart Column Mapping eliminates "Zone
+                    Name" issues.</p>
 
                 <div class="upload-area" id="uploadArea">
                     <h3>Drag & Drop Excel File Here</h3>
@@ -707,9 +709,12 @@
         uploadArea.onclick = () => fileInput.click();
         fileInput.onchange = (e) => processFile(e.target.files[0]);
 
+        let globalRows = [];
+        let globalHeaders = [];
+
         async function processFile(file) {
             if (!file) return;
-            document.getElementById('filePreview').innerHTML = "Parsing file...";
+            document.getElementById('filePreview').innerHTML = "Parsing file... Please wait.";
 
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -717,130 +722,22 @@
                     const data = new Uint8Array(e.target.result);
                     const wb = XLSX.read(data, { type: 'array' });
                     const sheet = wb.Sheets[wb.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    globalRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-                    if (rows.length < 2) throw new Error("File empty");
+                    if (globalRows.length < 2) throw new Error("File empty");
 
-                    // Helper: Check for Division column to avoid it
-                    const isRefName = (h) => {
-                        const s = String(h).toLowerCase();
-                        // Must include name/farmer/beneficiary
-                        // Must NOT include division/zone/circle unless specifically 'beneficiary name'
-                        if (s.includes('division') || s.includes('zone') || s.includes('circle')) return false;
-                        return s.includes('name') || s.includes('farmer') || s.includes('beneficiary');
-                    }
-
-                    // Find header row intelligently
+                    // intelligent header detection
                     let headerIdx = 0;
-                    let nameIdx = -1;
-
-                    for (let i = 0; i < Math.min(15, rows.length); i++) {
-                        const r = rows[i].map(x => String(x).toLowerCase());
-                        // Try to find a row that has 'Name' AND 'Phone' or 'Location'
-                        const hasName = r.some(c => isRefName(c));
-                        const hasPhone = r.some(c => c.includes('phone') || c.includes('mobile') || c.includes('contact'));
-                        if (hasName && hasPhone) {
+                    for (let i = 0; i < Math.min(15, globalRows.length); i++) {
+                        const r = globalRows[i].map(x => String(x).toLowerCase());
+                        if (r.some(c => c.includes('beneficiary') || c.includes('name') || c.includes('farmer'))) {
                             headerIdx = i;
                             break;
                         }
                     }
 
-                    const headers = rows[headerIdx].map(x => String(x).toLowerCase().trim());
-                    console.log("Headers detected:", headers);
-
-                    // Smart Column Mapper - finds index by multiple possible names
-                    const findCol = (...keywords) => {
-                        return headers.findIndex(h => keywords.some(k => h.includes(k.toLowerCase())));
-                    };
-
-                    // Map ALL required columns
-                    const colMap = {
-                        // Core Identification
-                        beneficiaryNo: findCol('beneficiary_no', 'beneficiary no', 'ben no', 'farmer id'),
-                        beneficiaryName: findCol('beneficiary_name', 'beneficiary name', 'farmer name', 'name'),
-                        mobileNo: findCol('mobile_no', 'mobile no', 'phone', 'contact', 'mobile'),
-
-                        // Location Hierarchy
-                        divisionName: findCol('division_name', 'division name', 'division'),
-                        subdivisionName: findCol('subdivision_name', 'subdivision name', 'subdivision', 'sub division'),
-                        talukaName: findCol('taluka_name', 'taluka name', 'taluka', 'taluk'),
-                        villageName: findCol('village_name', 'village name', 'village'),
-                        pinCode: findCol('pin_code', 'pin code', 'pincode', 'pin'),
-
-                        // Technical Details
-                        pumpLoad: findCol('pump_load', 'pump load', 'hp', 'load', 'capacity'),
-                        needMonopole: findCol('need_monopole', 'need monopole', 'monopole required'),
-                        monopoleHeight: findCol('monopole_height', 'monopole height', 'height'),
-                        needBoosterPump: findCol('need_booster_pump', 'need booster', 'booster required'),
-                        boosterCapacity: findCol('booster_capacity', 'booster capacity'),
-
-                        // Dates & Admin
-                        vendorSelectionDate: findCol('vendor_selection_date', 'vendor selection', 'selection date'),
-                        jsrApprRejDt: findCol('jsr_appr_rej_dt', 'jsr date', 'approval date', 'rejection date'),
-                        jsrRejReason: findCol('jsr_rej_reason', 'jsr reason', 'rejection reason')
-                    };
-
-                    console.log('Column Mapping:', colMap);
-
-                    // Validate critical fields
-                    if (colMap.beneficiaryName === -1) {
-                        throw new Error("Could not find 'BENEFICIARY_NAME' column. Please check your Excel headers.");
-                    }
-
-                    stagingData = [];
-                    for (let i = headerIdx + 1; i < rows.length; i++) {
-                        const r = rows[i];
-                        if (!r || !r[colMap.beneficiaryName]) continue;
-
-                        // Skip header-like rows
-                        const nameVal = String(r[colMap.beneficiaryName]).trim();
-                        if (!nameVal || nameVal.toLowerCase().includes('beneficiary') || nameVal.toLowerCase().includes('name')) continue;
-
-                        // Build complete record
-                        const record = {
-                            // Core Fields (standardized for app)
-                            BENEFICIARY_NO: r[colMap.beneficiaryNo] || '',
-                            BENEFICIARY_NAME: nameVal,
-                            MOBILE_NO: r[colMap.mobileNo] || '',
-
-                            // Also store as lowercase for compatibility
-                            name: nameVal,
-                            phone: r[colMap.mobileNo] || '',
-                            beneficiaryNo: r[colMap.beneficiaryNo] || '',
-
-                            // Location Hierarchy
-                            DIVISION_NAME: r[colMap.divisionName] || '',
-                            SUBDIVISION_NAME: r[colMap.subdivisionName] || '',
-                            TALUKA_NAME: r[colMap.talukaName] || '',
-                            VILLAGE_NAME: r[colMap.villageName] || '',
-                            PIN_CODE: r[colMap.pinCode] || '',
-                            location: r[colMap.villageName] || r[colMap.talukaName] || '', // Fallback for display
-
-                            // Technical
-                            PUMP_LOAD: r[colMap.pumpLoad] || '',
-                            hp: r[colMap.pumpLoad] || '', // Backwards compat
-                            NEED_MONOPOLE: r[colMap.needMonopole] || '',
-                            MONOPOLE_HEIGHT: r[colMap.monopoleHeight] || '',
-                            NEED_BOOSTER_PUMP: r[colMap.needBoosterPump] || '',
-                            BOOSTER_CAPACITY: r[colMap.boosterCapacity] || '',
-
-                            // Dates & Admin
-                            VENDOR_SELECTION_DATE: r[colMap.vendorSelectionDate] || '',
-                            JSR_APPR_REJ_DT: r[colMap.jsrApprRejDt] || '',
-                            JSR_REJ_REASON: r[colMap.jsrRejReason] || '',
-
-                            // Status & Metadata
-                            unloading_status: 'pending',
-                            installation_status: 'pending',
-                            createdAt: new Date(),
-                            importedAt: new Date()
-                        };
-
-                        stagingData.push(record);
-                    }
-
-                    // Render Staging
-                    renderStaging();
+                    globalHeaders = globalRows[headerIdx].map(String); // Keep original case
+                    renderColumnMapper(headerIdx);
 
                 } catch (err) {
                     console.error(err);
@@ -849,6 +746,131 @@
             };
             reader.readAsArrayBuffer(file);
         }
+
+        function renderColumnMapper(headerIdx) {
+            // Helper to build options
+            const buildOptions = (keyword) => {
+                let html = '<option value="-1">-- Select Column --</option>';
+                globalHeaders.forEach((h, i) => {
+                    const selected = h.toLowerCase().includes(keyword.toLowerCase()) ? 'selected' : '';
+                    html += `<option value="${i}" ${selected}>${h} (Col ${i + 1})</option>`;
+                });
+                return html;
+            };
+
+            const html = `
+                <div style="background:#f8f9fa; padding:20px; border-radius:10px; border:1px solid #ddd;">
+                    <h3>Map Your Columns</h3>
+                    <p>Please confirm which columns match the required fields:</p>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Beneficiary Name *</label>
+                            <select id="colName" style="width:100%; padding:8px;">${buildOptions('name')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Mobile No</label>
+                            <select id="colPhone" style="width:100%; padding:8px;">${buildOptions('mobile')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Village Name</label>
+                            <select id="colVillage" style="width:100%; padding:8px;">${buildOptions('village')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Taluka</label>
+                            <select id="colTaluka" style="width:100%; padding:8px;">${buildOptions('taluka')}</select>
+                         </div>
+                         <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Beneficiary ID/No</label>
+                            <select id="colId" style="width:100%; padding:8px;">${buildOptions('beneficiary')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Pump Load (HP)</label>
+                            <select id="colHp" style="width:100%; padding:8px;">${buildOptions('load')}</select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="generatePreview(${headerIdx})">Preview Data</button>
+                    <div id="mappingPreview" style="margin-top:20px;"></div>
+                </div>
+            `;
+            document.getElementById('filePreview').innerHTML = html;
+        }
+
+        window.generatePreview = (headerIdx) => {
+            const getVal = (id) => {
+                const idx = parseInt(document.getElementById(id).value);
+                return idx;
+            };
+
+            const map = {
+                name: getVal('colName'),
+                phone: getVal('colPhone'),
+                village: getVal('colVillage'),
+                taluka: getVal('colTaluka'),
+                id: getVal('colId'),
+                hp: getVal('colHp')
+            };
+
+            if (map.name === -1) {
+                alert("Please select the Beneficiary Name column!");
+                return;
+            }
+
+            stagingData = [];
+
+            // Process rows
+            for (let i = headerIdx + 1; i < globalRows.length; i++) {
+                const r = globalRows[i];
+                if (!r || !r[map.name]) continue;
+
+                // Skip header repetition
+                if (String(r[map.name]).toLowerCase().includes('name')) continue;
+
+                stagingData.push({
+                    BENEFICIARY_NAME: r[map.name],
+                    name: r[map.name],
+                    MOBILE_NO: map.phone > -1 ? r[map.phone] : '',
+                    phone: map.phone > -1 ? r[map.phone] : '',
+                    VILLAGE_NAME: map.village > -1 ? r[map.village] : '',
+                    location: map.village > -1 ? r[map.village] : '',
+                    TALUKA_NAME: map.taluka > -1 ? r[map.taluka] : '',
+                    BENEFICIARY_NO: map.id > -1 ? r[map.id] : '',
+                    PUMP_LOAD: map.hp > -1 ? r[map.hp] : '',
+                    hp: map.hp > -1 ? r[map.hp] : '',
+                    unloading_status: 'pending',
+                    installation_status: 'pending',
+                    createdAt: new Date(),
+                    importedAt: new Date()
+                });
+            }
+
+            // Render Preview Table
+            let html = `<div style="margin-top:20px; border-top:1px solid #ddd; padding-top:20px;">
+                <h4>Preview (${stagingData.length} records found)</h4>
+                <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; background:white;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <tr style="background:#eee; text-align:left;">
+                            <th style="padding:5px;">Name</th>
+                            <th style="padding:5px;">Village</th>
+                            <th style="padding:5px;">Phone</th>
+                        </tr>`;
+
+            stagingData.slice(0, 10).forEach(d => {
+                html += `<tr>
+                    <td style="padding:5px; border-bottom:1px solid #eee;">${d.name}</td>
+                    <td style="padding:5px; border-bottom:1px solid #eee;">${d.location}</td>
+                    <td style="padding:5px; border-bottom:1px solid #eee;">${d.phone}</td>
+                </tr>`;
+            });
+            html += `</table></div>
+                <div style="margin-top:15px; text-align:right;">
+                    <button class="btn btn-primary" style="background:green;" onclick="uploadStaging()">✅ Confirm & Upload</button>
+                </div>
+            </div>`;
+
+            document.getElementById('mappingPreview').innerHTML = html;
+        };
 
         function renderStaging() {
             stagingData = stagingData.filter(d => d.name && d.name.length > 2); // cleanup empty rows
