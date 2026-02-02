@@ -270,6 +270,7 @@
         .farmer-search-container {
             position: relative;
         }
+
         #farmerSearch {
             width: 100%;
             padding: 15px;
@@ -278,30 +279,37 @@
             font-size: 16px;
             margin-bottom: 10px;
         }
+
         #farmerSearchResults {
             max-height: 300px;
             overflow-y: auto;
             border: 1px solid #eee;
             border-radius: 10px;
-            display: none; /* Hidden by default */
+            display: none;
+            /* Hidden by default */
         }
+
         .farmer-list-item {
             padding: 15px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background 0.2s;
         }
+
         .farmer-list-item:hover {
             background: #f8f9fa;
         }
+
         .farmer-list-item.selected {
             background: #e3f2fd;
             border-left: 4px solid #667eea;
         }
+
         .farmer-item-name {
             font-weight: 600;
             color: #333;
         }
+
         .farmer-item-meta {
             font-size: 12px;
             color: #888;
@@ -343,9 +351,10 @@
         <!-- Step 1: Select Farmer -->
         <div class="card" id="selectFarmerStep">
             <h2>Select Farmer</h2>
-            
+
             <div class="farmer-search-container">
-                <input type="text" id="farmerSearch" placeholder="🔍 Type Name, Phone or ID..." onkeyup="filterFarmers()">
+                <input type="text" id="farmerSearch" placeholder="🔍 Type Name, Phone or ID..."
+                    onkeyup="filterFarmers()">
                 <div id="farmerSearchResults">
                     <div style="padding:20px; text-align:center; color:#999;">Loading farmers database...</div>
                 </div>
@@ -481,7 +490,7 @@
         let currentUser = null;
         let selectedFarmer = null;
         let allFarmers = []; // Store for filtering
-        
+
         let scannedData = {
             controller: { qr: '', photo: null },
             pump: { qr: '', hp: '', photo: null },
@@ -504,71 +513,85 @@
         async function loadFarmers() {
             const listContainer = document.getElementById('farmerSearchResults');
             listContainer.style.display = 'block';
-            
+
             try {
-                // Fetch ALL farmers from master, do filtering in JS to handle status quirks
+                // Fetch ALL farmers from to handle large list locally
                 const snapshot = await getDocs(collection(db, 'farmers_master'));
-                
+
                 allFarmers = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // Robust Check: Allows 'pending', 'in_progress', or undefined (newly imported)
-                    if (!data.unloading_status || data.unloading_status === 'pending' || data.unloading_status === 'in_progress') {
-                        allFarmers.push({ id: doc.id, ...data });
+                    // Normalize Name
+                    const name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || 'Unknown';
+                    const location = data.location || data.LOCATION || data.VILLAGE || '';
+                    const phone = data.phone || data.MOBILE_NO || '';
+                    const hp = data.hp || data.PUMP_LOAD || '';
+
+                    // Robust Status Check
+                    let status = data.unloading_status || 'pending';
+                    status = status.toLowerCase();
+
+                    if (status === 'pending' || status === 'in_progress') {
+                        allFarmers.push({
+                            id: doc.id,
+                            name, location, phone, hp,
+                            ...data
+                        });
                     }
                 });
-                
+
                 // Keep only top 50 initially to be fast
                 renderFarmerList(allFarmers.slice(0, 50));
-                
-                if(allFarmers.length === 0) {
-                     listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No pending unloads found. Good job!</div>';
+
+                if (allFarmers.length === 0) {
+                    listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No pending unloads found. Good job!</div>';
                 }
 
             } catch (error) {
                 console.error('Error loading farmers:', error);
-                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error loading database. Check internet.</div>';
+                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error loading database: ' + error.message + '</div>';
             }
         }
-        
+
         window.renderFarmerList = (list) => {
-             const container = document.getElementById('farmerSearchResults');
-             container.innerHTML = '';
-             
-             if(list.length === 0) {
-                 container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
-                 return;
-             }
-             
-             list.forEach(farmer => {
-                 const div = document.createElement('div');
-                 div.className = 'farmer-list-item';
-                 div.innerHTML = `
-                     <div class="farmer-item-name">${farmer.name || 'Unknown Name'}</div>
+            const container = document.getElementById('farmerSearchResults');
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
+                return;
+            }
+
+            list.forEach(farmer => {
+                const div = document.createElement('div');
+                div.className = 'farmer-list-item';
+                div.innerHTML = `
+                     <div class="farmer-item-name">${farmer.name}</div>
                      <div class="farmer-item-meta">
                          📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
                      </div>
                  `;
-                 div.onclick = () => selectFarmer(farmer);
-                 container.appendChild(div);
-             });
-             container.style.display = 'block';
+                div.onclick = () => selectFarmer(farmer);
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
         };
-        
+
         window.filterFarmers = () => {
-             const term = document.getElementById('farmerSearch').value.toLowerCase();
-             const filtered = allFarmers.filter(f => 
-                  (f.name||'').toLowerCase().includes(term) || 
-                  (f.phone||'').includes(term) ||
-                  (f.location||'').toLowerCase().includes(term)
-             );
-             // Show top 20 matches
-             renderFarmerList(filtered.slice(0, 20));
+            const term = document.getElementById('farmerSearch').value.toLowerCase();
+            const filtered = allFarmers.filter(f =>
+                (f.name || '').toLowerCase().includes(term) ||
+                (f.phone || '').includes(term) ||
+                (f.location || '').toLowerCase().includes(term)
+            );
+            // Show top 20 matches
+            renderFarmerList(filtered.slice(0, 20));
         };
+
 
         window.selectFarmer = (farmer) => {
             selectedFarmer = farmer;
-            
+
             // Highlight selection visually (optional, but we mainly fill the info box)
             document.getElementById('farmerSearch').value = farmer.name;
             document.getElementById('farmerSearchResults').style.display = 'none';
@@ -587,21 +610,21 @@
                     <div class="detail-item">⚡ ${selectedFarmer.hp || '?'} HP</div>
                 </div>
             `;
-            
+
             // Enable Next
             const btn = document.getElementById('startScanBtn');
             btn.disabled = false;
             btn.innerHTML = "Start Scanning for " + selectedFarmer.name.split(' ')[0];
         };
-        
+
         window.clearSelection = () => {
-             selectedFarmer = null;
-             document.getElementById('farmerInfo').classList.add('hidden');
-             document.getElementById('startScanBtn').disabled = true;
-             document.getElementById('startScanBtn').innerHTML = "Start Scanning Materials";
-             document.getElementById('farmerSearch').value = '';
-             document.getElementById('farmerSearchResults').style.display = 'block';
-             renderFarmerList(allFarmers.slice(0, 50));
+            selectedFarmer = null;
+            document.getElementById('farmerInfo').classList.add('hidden');
+            document.getElementById('startScanBtn').disabled = true;
+            document.getElementById('startScanBtn').innerHTML = "Start Scanning Materials";
+            document.getElementById('farmerSearch').value = '';
+            document.getElementById('farmerSearchResults').style.display = 'block';
+            renderFarmerList(allFarmers.slice(0, 50));
         };
 
         window.startScanning = () => {
@@ -625,7 +648,7 @@
             const readerDiv = document.getElementById(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
             readerDiv.classList.remove('hidden');
 
-            html5 QrCode = new Html5Qrcode(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            const html5QrCode = new Html5Qrcode(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
 
             try {
                 await html5QrCode.start(

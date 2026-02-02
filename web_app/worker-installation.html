@@ -303,20 +303,32 @@
                 const snapshot = await getDocs(collection(db, 'farmers_master'));
                 select.innerHTML = '<option value="">Select farmer...</option>';
 
+                let count = 0;
                 snapshot.forEach(doc => {
                     const data = doc.data();
+
+                    // Normalize
+                    const name = data.name || data.FULL_NAME || data.BENEFICIARY_NAME || 'Unknown';
+                    const location = data.location || data.LOCATION || data.VILLAGE || '';
+                    const hp = data.hp || data.PUMP_LOAD || '';
+
+                    let unloadStatus = (data.unloading_status || 'pending').toLowerCase();
+                    let installStatus = (data.installation_status || 'pending').toLowerCase();
+
                     // Only show farmers who have completed unloading
-                    if (data.unloading_status === 'done' && data.installation_status !== 'done') {
+                    if (unloadStatus === 'done' && installStatus !== 'done') {
                         const option = document.createElement('option');
                         option.value = doc.id;
-                        option.textContent = `${data.name} - ${data.location} (${data.hp} HP)`;
-                        option.dataset.farmer = JSON.stringify({ id: doc.id, ...data });
+                        option.textContent = `${name} - ${location} (${hp} HP)`;
+                        // Store normalized data
+                        option.dataset.farmer = JSON.stringify({ id: doc.id, name, location, hp, phone: data.phone || data.MOBILE_NO || '' });
                         select.appendChild(option);
+                        count++;
                     }
                 });
 
-                if (select.options.length === 1) {
-                    select.innerHTML = '<option value="">No farmers ready for installation</option>';
+                if (count === 0) {
+                    select.innerHTML = '<option value="">No farmers ready for installation (Unloading must be done first)</option>';
                 }
             } catch (error) {
                 console.error('Error loading farmers:', error);

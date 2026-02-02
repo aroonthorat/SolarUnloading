@@ -259,8 +259,8 @@
         <div class="header">
             <div>
                 <h1>Admin Dashboard <span
-                        style="font-size:14px; background:#e0e0e0; padding:4px 8px; border-radius:12px; vertical-align:middle;">v2.1
-                        Live</span></h1>
+                        style="font-size:14px; background:#e0e0e0; padding:4px 8px; border-radius:12px; vertical-align:middle;">v2.2
+                        (Schema Fix)</span></h1>
                 <p id="userName" style="color:#666;">Welcome back</p>
             </div>
         </div>
@@ -298,8 +298,9 @@
         <div id="upload-tab" class="tab-content">
             <div class="card">
                 <h2>Upload Farmer List (Excel/CSV)</h2>
-                <p>Ensure columns include: Name, Location, Phone, HP. <a href="#" onclick="downloadTemplate()">Download
-                        Template</a></p>
+                <p>Ensure columns include: <strong>Full Name</strong> (or Beneficiary Name), Location, Phone, HP.</p>
+                <p style="color:red; font-size:13px; margin-top:5px;">⚠️ Note: 'Division' or 'Zone' columns will be
+                    ignored for names.</p>
 
                 <div class="upload-area" id="uploadArea">
                     <h3>Drag & Drop Excel File Here</h3>
@@ -314,8 +315,10 @@
         <div id="farmers-tab" class="tab-content">
             <div class="card">
                 <h2>Farmers Database</h2>
+                <p style="margin-bottom:10px; color:#666; font-size:13px;">Showing data from:
+                    <code>farmers_master</code></p>
                 <div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <input type="text" id="searchBox" placeholder="Search..."
+                    <input type="text" id="searchBox" placeholder="Search Name, ID, or Location..."
                         style="padding:10px; border:1px solid #ddd; border-radius:8px; flex:1;"
                         onkeyup="filterFarmers()">
                     <select id="statusFilter" onchange="filterFarmers()" style="padding:10px; border-radius:8px;">
@@ -334,7 +337,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -353,6 +356,22 @@
         window.allFarmersData = [];
         let stagingData = [];
         let selectedIndices = new Set();
+
+        // Helper: Data Normalizer
+        function normalizeFarmer(doc) {
+            const d = doc.data();
+            // Handle different Key Casing and variations
+            return {
+                id: doc.id,
+                name: d.name || d.FULL_NAME || d.BENEFICIARY_NAME || d.Farmer_Name || 'Unknown',
+                location: d.location || d.LOCATION || d.VILLAGE || d.Village || d.CIRCLE_NAME || '',
+                phone: d.phone || d.MOBILE_NO || d.Contact_No || '',
+                hp: d.hp || d.PUMP_LOAD || d.HP || '',
+                unloading_status: (d.unloading_status || 'pending').toLowerCase(),
+                installation_status: (d.installation_status || 'pending').toLowerCase(),
+                createdAt: d.createdAt || null
+            };
+        }
 
         // Auth
         onAuthStateChanged(auth, (user) => {
@@ -397,12 +416,13 @@
                 let recent = [];
 
                 snap.forEach(doc => {
-                    const d = doc.data();
-                    if (!d.unloading_status || d.unloading_status === 'pending') pending++;
-                    else if (d.unloading_status === 'done' && d.installation_status !== 'done') install++;
-                    else if (d.installation_status === 'done') done++;
+                    const f = normalizeFarmer(doc);
 
-                    recent.push({ ...d, id: doc.id });
+                    if (f.unloading_status === 'pending') pending++;
+                    else if (f.unloading_status === 'done' && f.installation_status !== 'done') install++;
+                    else if (f.installation_status === 'done') done++;
+
+                    recent.push(f);
                 });
 
                 document.getElementById('totalFarmers').textContent = total;
@@ -416,7 +436,7 @@
                 let html = '<ul style="list-style:none;">';
                 recent.slice(0, 5).forEach(r => {
                     html += `<li style="padding:8px 0; border-bottom:1px solid #eee;">
-                        <strong>${r.name}</strong> - ${r.location} <span class="status-badge status-pending">${r.unloading_status || 'New'}</span>
+                        <strong>${r.name}</strong> - ${r.location} <span class="status-badge status-${r.unloading_status === 'done' ? 'complete' : 'pending'}">${r.unloading_status}</span>
                     </li>`;
                 });
                 html += '</ul>';
@@ -431,13 +451,15 @@
         // --- FARMERS LIST & FILTER ---
         window.loadFarmers = async () => {
             const list = document.getElementById('farmersList');
-            if (window.allFarmersData.length === 0) list.innerHTML = "Loading...";
+            if (!window.allFarmersData || window.allFarmersData.length === 0) list.innerHTML = "Loading...";
 
             try {
                 // Refresh Data
                 const snap = await getDocs(collection(db, 'farmers_master'));
                 window.allFarmersData = [];
-                snap.forEach(d => window.allFarmersData.push({ ...d.data(), id: d.id }));
+                snap.forEach(doc => {
+                    window.allFarmersData.push(normalizeFarmer(doc));
+                });
 
                 filterFarmers();
             } catch (e) {
@@ -447,10 +469,22 @@
 
         window.filterFarmers = () => {
             const term = document.getElementById('searchBox').value.toLowerCase();
-            // Simple version of filter
-            const filtered = window.allFarmersData.filter(f =>
-                (f.name || '').toLowerCase().includes(term) || (f.location || '').toLowerCase().includes(term)
-            );
+            const status = document.getElementById('statusFilter').value;
+
+            // Normalize & Filter
+            const filtered = window.allFarmersData.filter(f => {
+                const matchTerm = (f.name || '').toLowerCase().includes(term) ||
+                    (f.location || '').toLowerCase().includes(term) ||
+                    (f.phone || '').includes(term) ||
+                    (f.id || '').toLowerCase().includes(term);
+
+                let matchStatus = true;
+                if (status === 'pending') matchStatus = f.unloading_status === 'pending';
+                if (status === 'unloading_done') matchStatus = f.unloading_status === 'done';
+                if (status === 'fully_complete') matchStatus = f.installation_status === 'done';
+
+                return matchTerm && matchStatus;
+            });
 
             const list = document.getElementById('farmersList');
             if (filtered.length === 0) { list.innerHTML = "<p>No matches.</p>"; return; }
@@ -460,11 +494,13 @@
                 html += `<div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
                      <div>
                          <div style="font-weight:bold;">${f.name}</div>
-                         <div style="color:#777; font-size:13px;">${f.location} | ${f.phone || '-'}</div>
+                         <div style="color:#777; font-size:13px;">${f.location} | 📞 ${f.phone} | ⚡ ${f.hp}HP</div>
+                         <div style="font-size:10px; color:#aaa;">ID: ${f.id}</div>
                      </div>
-                     <div>${f.unloading_status || 'Pending'}</div>
+                     <div><span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status}</span></div>
                  </div>`;
             });
+            if (filtered.length > 50) html += `<div style="padding:10px;text-align:center;color:#999;">+ ${filtered.length - 50} more (use search)</div>`;
             list.innerHTML = html;
         };
 
@@ -489,29 +525,63 @@
 
                     if (rows.length < 2) throw new Error("File empty");
 
-                    // Find header (dumb search for 'name')
+                    // Helper: Check for Division column to avoid it
+                    const isRefName = (h) => {
+                        const s = String(h).toLowerCase();
+                        // Must include name/farmer/beneficiary
+                        // Must NOT include division/zone/circle unless specifically 'beneficiary name'
+                        if (s.includes('division') || s.includes('zone') || s.includes('circle')) return false;
+                        return s.includes('name') || s.includes('farmer') || s.includes('beneficiary');
+                    }
+
+                    // Find header row intelligently
                     let headerIdx = 0;
-                    for (let i = 0; i < Math.min(10, rows.length); i++) {
-                        if (JSON.stringify(rows[i]).toLowerCase().includes('name')) { headerIdx = i; break; }
+                    let nameIdx = -1;
+
+                    for (let i = 0; i < Math.min(15, rows.length); i++) {
+                        const r = rows[i].map(x => String(x).toLowerCase());
+                        // Try to find a row that has 'Name' AND 'Phone' or 'Location'
+                        const hasName = r.some(c => isRefName(c));
+                        const hasPhone = r.some(c => c.includes('phone') || c.includes('mobile') || c.includes('contact'));
+                        if (hasName && hasPhone) {
+                            headerIdx = i;
+                            break;
+                        }
                     }
 
                     const headers = rows[headerIdx].map(x => String(x).toLowerCase());
-                    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('farmer'));
-                    const locIdx = headers.findIndex(h => h.includes('location') || h.includes('village'));
+                    console.log("Headers detected:", headers);
+
+                    // Map Columns
+                    nameIdx = headers.findIndex(h => isRefName(h));
+                    // Fallback for name if strict check fails: look for ANY 'name' that isn't empty, preferring 'beneficiary'
+                    if (nameIdx === -1) nameIdx = headers.findIndex(h => h.includes('beneficiary'));
+                    if (nameIdx === -1) nameIdx = headers.findIndex(h => h.includes('name') && !h.includes('division'));
+
+                    const locIdx = headers.findIndex(h => h.includes('village') || h.includes('location') || h.includes('circle'));
                     const phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('mobile'));
-                    const hpIdx = headers.findIndex(h => h.includes('hp'));
+                    const hpIdx = headers.findIndex(h => h.includes('hp') || h.includes('load'));
+
+                    console.log(`Mapped: Name=${nameIdx}, Loc=${locIdx}, Phone=${phoneIdx}`);
+
+                    if (nameIdx === -1) throw new Error("Could not find a 'Name' or 'Beneficiary Name' column. Please check your Excel headers.");
 
                     stagingData = [];
                     for (let i = headerIdx + 1; i < rows.length; i++) {
                         const r = rows[i];
                         if (!r || !r[nameIdx]) continue;
 
+                        // Exclude if it looks like a header (contains 'Name')
+                        if (String(r[nameIdx]).toLowerCase().includes('name')) continue;
+
                         stagingData.push({
-                            name: r[nameIdx],
+                            FULL_NAME: r[nameIdx], // Store as FULL_NAME to match existing schema mostly
+                            name: r[nameIdx],     // Also store as name for simpler querying
                             location: r[locIdx] || '',
                             phone: r[phoneIdx] || '',
                             hp: r[hpIdx] || '',
                             unloading_status: 'pending',
+                            installation_status: 'pending',
                             createdAt: new Date()
                         });
                     }
@@ -528,34 +598,49 @@
         }
 
         function renderStaging() {
-            selectedIndices = new Set(stagingData.map((_, i) => i)); // all
+            stagingData = stagingData.filter(d => d.name && d.name.length > 2); // cleanup empty rows
             document.getElementById('filePreview').innerHTML = `
                  <div class="card" style="margin-top:20px;">
                      <h3>Found ${stagingData.length} records</h3>
+                     <p>Review the first few to ensure names are correct (not Division names):</p>
                      <button class="btn btn-primary" onclick="uploadStaging()">Confirm & Upload</button>
-                     <div style="max-height:300px; overflow:auto; margin-top:10px;">
-                         ${stagingData.map(d => `<div>${d.name} - ${d.location}</div>`).join('')}
+                     <div style="max-height:300px; overflow:auto; margin-top:10px; border:1px solid #eee;">
+                         ${stagingData.slice(0, 50).map(d => `<div style="padding:5px; border-bottom:1px solid #eee;">${d.name} <span style="color:gray">(${d.location})</span></div>`).join('')}
                      </div>
                  </div>
              `;
         }
 
         window.uploadStaging = async () => {
-            const btn = document.querySelector('button[onclick="uploadStaging()"]'); // safe selector
-            if (btn) btn.innerText = "Uploading...";
+            const btn = document.querySelector('button[onclick="uploadStaging()"]');
+            if (btn) { btn.innerText = "Uploading..."; btn.disabled = true; }
 
+            let batch = writeBatch(db);
             let count = 0;
+            let batchSize = 0;
+
             for (let d of stagingData) {
-                await addDoc(collection(db, 'farmers_master'), d);
+                const ref = doc(collection(db, 'farmers_master'));
+                batch.set(ref, d);
+                batchSize++;
                 count++;
+
+                // Batch limit is 500
+                if (batchSize >= 400) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                    batchSize = 0;
+                }
             }
-            alert(`Uploaded ${count} records!`);
+            if (batchSize > 0) await batch.commit();
+
+            alert(`Uploaded ${count} records successfully!`);
             document.getElementById('filePreview').innerHTML = "";
             showTab('farmers');
         };
 
         window.downloadTemplate = () => {
-            const ws = XLSX.utils.aoa_to_sheet([['Name', 'Location', 'Phone', 'HP'], ['John Doe', 'Village A', '9999999999', '5']]);
+            const ws = XLSX.utils.aoa_to_sheet([['Beneficiary Name', 'Village', 'Mobile No', 'Pump Load'], ['Ramesh Kumar', 'Village A', '9999999999', '5']]);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Farmers");
             XLSX.writeFile(wb, "Template.xlsx");
