@@ -387,8 +387,13 @@
                     <span id="dbStatus" style="font-size:12px; color:#666; cursor:pointer;" onclick="loadFarmers()">↻
                         Check DB</span>
                 </div>
-                <input type="text" id="farmerSearch" placeholder="🔍 Type Name or Phone..."
-                    onkeyup="filterFarmers(event)">
+                <div style="display:flex; gap:8px; margin-bottom:10px;">
+                    <input type="text" id="farmerSearch" placeholder="🔍 Name, Village, Status..."
+                        onkeyup="filterFarmers(event)" style="margin-bottom:0;">
+                    <button id="aiSearchBtn" onclick="aiSearch()"
+                        style="white-space:nowrap; border:none; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);">✨
+                        AI Search</button>
+                </div>
                 <div id="farmerSearchResults">
                     <div style="padding:20px; text-align:center; color:#999;">Loading farmers database...</div>
                 </div>
@@ -707,6 +712,71 @@
 
             // Show top 20 matches
             renderFarmerList(filtered.slice(0, 20));
+        };
+
+        window.aiSearch = async () => {
+            const term = document.getElementById('farmerSearch').value;
+            if (!term) { alert("Please type something to search!"); return; }
+
+            const btn = document.getElementById('aiSearchBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '🤔 Thinking...';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+
+            try {
+                // 1. Prepare lightweight list (save tokens)
+                const context = allFarmers.map(f => ({
+                    id: f.id,
+                    n: f.name,
+                    l: f.location,
+                    p: f.phone,
+                    hp: f.hp,
+                    s: f.unloading_status
+                }));
+
+                // 2. Construct Prompt
+                const prompt = `
+                 I have a dataset of farmers: ${JSON.stringify(context)}.
+                 
+                 The user is searching for: "${term}".
+                 
+                 Task: Return a JSON Array of IDs for farmers that match the user's intent.
+                 - Handle fuzzy matching (e.g. "Ram" matches "Ramesh").
+                 - Handle semantic queries (e.g. "pending farmers in Vadodara").
+                 - Return ONLY the JSON array (e.g. ["id1", "id2"]). No markdown.
+                 `;
+
+                // 3. Call Gemini
+                const result = await geminiModel.generateContent(prompt);
+                const response = result.response;
+                let text = response.text();
+
+                // Clean response
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const ids = JSON.parse(text);
+
+                // 4. Update UI
+                if (Array.isArray(ids) && ids.length > 0) {
+                    const matches = allFarmers.filter(f => ids.includes(f.id));
+                    console.log(`AI found ${matches.length} matches`);
+                    renderFarmerList(matches);
+                    // Add simple badge
+                    const container = document.getElementById('farmerSearchResults');
+                    container.insertAdjacentHTML('afterbegin', `<div style="padding:5px; background:#e3f2fd; color:#0d47a1; font-size:12px; text-align:center;">✨ AI found ${matches.length} smart matches</div>`);
+                } else {
+                    alert("AI couldn't find any specific matches. Try a different query.");
+                }
+
+            } catch (error) {
+                console.error("AI Search Error:", error);
+                alert("AI Search failed (Check quota or network). Falling back to standard search.");
+                filterFarmers(); // Fallback
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
         };
 
 
