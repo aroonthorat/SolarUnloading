@@ -313,7 +313,7 @@
     <div class="sidebar">
         <div class="logo">
             ☀️ SolarTrack PRO
-            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.15</div>
+            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.16</div>
         </div>
         <div class="nav-item active" onclick="showTab('dashboard')" id="nav-dashboard">📊 Dashboard</div>
         <div class="nav-item" onclick="showTab('upload')" id="nav-upload">📤 Upload Data</div>
@@ -337,8 +337,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.15
-                            (PDF Image Fix)</span></h2>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.16
+                            (Excel Export)</span></h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
                 <div style="text-align:right;">
@@ -396,8 +396,12 @@
                 <div id="bulkActions"
                     style="background:#ffebee; padding:10px; border-radius:8px; display:none; justify-content:space-between; align-items:center; margin-bottom:15px; border:1px solid #ffcdd2;">
                     <span style="font-weight:bold; color:#d32f2f;">Selected: <span id="selectedCount">0</span></span>
-                    <button class="btn btn-delete" style="padding:5px 15px;" onclick="deleteSelected()">🗑️ Delete
-                        Selected</button>
+                    <div>
+                        <button class="btn" style="background:#4caf50; color:white; padding:5px 15px; margin-right:5px;"
+                            onclick="exportToExcel()">📊 Export Selected</button>
+                        <button class="btn btn-delete" style="padding:5px 15px;" onclick="deleteSelected()">🗑️ Delete
+                            Selected</button>
+                    </div>
                 </div>
 
                 <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
@@ -412,6 +416,9 @@
                         <option value="unloading_done">Unloaded</option>
                         <option value="fully_complete">Complete</option>
                     </select>
+                    <button id="btnExport" class="btn"
+                        style="background:#4caf50; color:white; padding:10px 15px; font-weight:bold; white-space:nowrap;"
+                        onclick="exportToExcel()">📊 Export Excel</button>
                 </div>
                 <div id="farmersList"></div>
             </div>
@@ -1135,6 +1142,103 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Farmers");
             XLSX.writeFile(wb, "Template.xlsx");
+        };
+
+        // --- EXCEL EXPORT ---
+        window.exportToExcel = async () => {
+            // Determine list: Selected or All Filtered
+            let targets = [];
+            if (window.selectedFarmers && window.selectedFarmers.size > 0) {
+                targets = window.allFarmersData.filter(f => window.selectedFarmers.has(f.id));
+            } else {
+                targets = window.currentFilteredData || window.allFarmersData;
+            }
+
+            if (!targets || targets.length === 0) { alert("No farmers to export."); return; }
+            if (!confirm(`Exporting ${targets.length} records to Excel. This may take a moment. Continue?`)) return;
+
+            const btn = document.getElementById('btnExport');
+            const originalText = btn ? btn.innerText : 'Export';
+            if (btn) { btn.innerText = "⏳ Preparing..."; btn.disabled = true; }
+
+            try {
+                const rows = [];
+
+                // Fetch all records efficiently? 
+                // For now, we fetch in parallel with a limit, or simple loop
+                // optimize: Fetch ALL unloading records once if list is huge? 
+                // Let's do batch fetch logic: query unloading_records where farmer_id IN [...] splits
+
+                // Simpler approach for <500 items: Loop and fetch.
+                // Optimized: We can't do "IN" for >30 items. 
+                // We will loop.
+
+                let processed = 0;
+
+                // Helper to format date
+                const fmtDate = (ts) => ts ? new Date(ts.seconds * 1000).toLocaleString() : '-';
+
+                for (let i = 0; i < targets.length; i++) {
+                    const f = targets[i];
+                    if (btn) btn.innerText = `⏳ ${i + 1}/${targets.length}`;
+
+                    // Fetch Details
+                    let uData = null;
+                    let iData = null;
+
+                    // Only fetch if status indicates data exists to save reads
+                    if (f.unloading_status === 'done') {
+                        const q = query(collection(db, 'unloading_records'), where('farmer_id', '==', f.id));
+                        const snap = await getDocs(q);
+                        if (!snap.empty) uData = snap.docs[0].data();
+                    }
+                    if (f.installation_status === 'done' || f.installation_status === 'pending') {
+                        // Check install records even if pending? No, only done usually has photos.
+                        // But maybe partial? 
+                        const q = query(collection(db, 'installation_records'), where('farmer_id', '==', f.id));
+                        const snap = await getDocs(q);
+                        if (!snap.empty) iData = snap.docs[0].data();
+                    }
+
+                    rows.push({
+                        "Sr No": i + 1,
+                        "Beneficiary ID": f.beneficiaryNo || f.id,
+                        "Farmer Name": f.name,
+                        "Mobile": f.phone,
+                        "Village": f.location,
+                        "Taluka": f.TALUKA_NAME || '',
+                        "Pump HP": f.hp || f.PUMP_LOAD,
+
+                        "Unloading Status": f.unloading_status.toUpperCase(),
+                        "Unloading Date": uData ? fmtDate(uData.timestamp) : '-',
+                        "Unloaded By": uData ? (uData.unloaded_by_name || uData.worker_email) : '-',
+                        "Controller QR": uData?.controller?.qr || '-',
+                        "Pump QR": uData?.pump?.qr || '-',
+                        "Panel QR": uData?.panels?.qr || '-',
+                        "Photo: Controller": uData?.controller?.photo || '',
+                        "Photo: Pump": uData?.pump?.photo || '',
+                        "Photo: Panels": uData?.panels?.photo || '',
+
+                        "Installation Status": (f.installation_status || 'pending').toUpperCase(),
+                        "Installation Date": iData ? fmtDate(iData.timestamp) : '-',
+                        "Installed By": iData ? (iData.installed_by_name || iData.worker_email) : '-',
+                        "Photo: Installation": iData ? (Array.isArray(iData.photos) ? iData.photos.join(', ') : (iData.photos || iData.photoUrls || '')) : ''
+                    });
+                }
+
+                // Generate Sheet
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Farmer_Report");
+
+                XLSX.writeFile(wb, `Solar_Farmers_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+            } catch (e) {
+                console.error(e);
+                alert("Export failed: " + e.message);
+            } finally {
+                if (btn) { btn.innerText = originalText; btn.disabled = false; }
+            }
         };
 
         // --- PDF GENERATION ---
