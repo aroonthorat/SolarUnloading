@@ -313,7 +313,7 @@
     <div class="sidebar">
         <div class="logo">
             ☀️ SolarTrack PRO
-            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.13</div>
+            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.14</div>
         </div>
         <div class="nav-item active" onclick="showTab('dashboard')" id="nav-dashboard">📊 Dashboard</div>
         <div class="nav-item" onclick="showTab('upload')" id="nav-upload">📤 Upload Data</div>
@@ -337,8 +337,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.13
-                            (PDF Fixed)</span></h2>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.14
+                            (Visual Reports)</span></h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
                 <div style="text-align:right;">
@@ -1144,9 +1144,27 @@
 
             // Toast
             const toast = document.createElement('div');
-            toast.innerText = "Generating PDF...";
+            toast.innerText = "Generating PDF (Downloading Images)...";
             toast.style.cssText = "position:fixed;top:20px;right:20px;padding:15px;background:#333;color:white;z-index:9999;border-radius:5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);";
             document.body.appendChild(toast);
+
+            // Helper: Convert Image URL to Base64
+            const getBase64FromUrl = async (url) => {
+                try {
+                    const res = await fetch(url, { mode: 'cors' });
+                    if (!res.ok) throw new Error('Network error');
+                    const blob = await res.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) {
+                    console.warn("CORS/Fetch Error for image:", url, e);
+                    return null; // Fallback to link
+                }
+            };
 
             try {
                 // Fetch Data
@@ -1228,54 +1246,74 @@
                     styles: { fontSize: 10, cellPadding: 3 }
                 });
 
-                // PHOTOS (Links)
+                // PHOTOS SECTION
                 y = doc.lastAutoTable.finalY + 15;
+                const pageHeight = doc.internal.pageSize.height;
+
+                if (y > pageHeight - 60) { doc.addPage(); y = 20; }
+
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
-                doc.text("Photo Evidence (Click to View Online)", 14, y);
-                y += 8;
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 255);
+                doc.text("Photo Evidence:", 14, y);
+                y += 10;
 
-                const addLink = (label, url) => {
-                    if (!url) return;
-                    doc.textWithLink(`🔗 ${label}`, 14, y, { url: url });
-                    y += 6;
-                };
-
-                let photoCount = 0;
-
-                // Extract Unloading Photos
+                // Collect Photos
+                const photoList = [];
                 if (unloadData) {
-                    if (unloadData.controller?.photo) { addLink("[Unloading] Controller Photo", unloadData.controller.photo); photoCount++; }
-                    if (unloadData.pump?.photo) { addLink("[Unloading] Pump Photo", unloadData.pump.photo); photoCount++; }
-                    if (unloadData.panels?.photo) { addLink("[Unloading] Panels Photo", unloadData.panels.photo); photoCount++; }
-
-                    if (unloadData.issues?.photos && Array.isArray(unloadData.issues.photos)) {
-                        unloadData.issues.photos.forEach((url, i) => {
-                            addLink(`[Unloading] Issue Photo ${i + 1}`, url);
-                            photoCount++;
-                        });
-                    }
+                    if (unloadData.controller?.photo) photoList.push({ label: "Controller", url: unloadData.controller.photo });
+                    if (unloadData.pump?.photo) photoList.push({ label: "Pump", url: unloadData.pump.photo });
+                    if (unloadData.panels?.photo) photoList.push({ label: "Panels", url: unloadData.panels.photo });
                 }
-
-                // Extract Installation Photos
                 if (installData) {
                     const photos = installData.photos || installData.photoUrls || installData.images || [];
                     if (Array.isArray(photos)) {
-                        photos.forEach((url, i) => {
-                            addLink(`[Installation] Photo ${i + 1}`, url);
-                            photoCount++;
-                        });
+                        photos.forEach((url, i) => photoList.push({ label: `Install ${i + 1}`, url }));
                     }
                 }
 
-                if (photoCount === 0) {
+                if (photoList.length === 0) {
                     doc.setTextColor(100, 100, 100);
                     doc.text("(No photos uploaded)", 14, y);
+                } else {
+                    // Render Grid (2 cols)
+                    let x = 14;
+                    const imgW = 80;
+                    const imgH = 60;
+
+                    for (let i = 0; i < photoList.length; i++) {
+                        // Check Page Break
+                        if (y + imgH + 10 > pageHeight) {
+                            doc.addPage();
+                            y = 20;
+                            x = 14;
+                        }
+
+                        const p = photoList[i];
+                        toast.innerText = `Adding Photo ${i + 1}/${photoList.length}...`;
+
+                        try {
+                            const base64 = await getBase64FromUrl(p.url);
+                            if (base64) {
+                                doc.addImage(base64, "JPEG", x, y, imgW, imgH);
+                                doc.setFontSize(9);
+                                doc.text(p.label, x, y + imgH + 5);
+                            } else {
+                                // Fallback Link
+                                doc.textWithLink(`🔗 ${p.label} (Click to open)`, x, y + 10, { url: p.url });
+                                doc.rect(x, y, imgW, imgH); // Placeholder box
+                            }
+                        } catch (err) {
+                            console.log(err);
+                            doc.text(`(Image Error)`, x, y + 10);
+                        }
+
+                        // Grid logic
+                        if (x === 14) { x += imgW + 10; }
+                        else { x = 14; y += imgH + 15; }
+                    }
                 }
 
-                doc.save(`${farmer.name.replace(/\s+/g, '_')}_Report.pdf`);
+                doc.save(`${farmer.name.replace(/\s+/g, '_')}_VisualReport.pdf`);
 
             } catch (e) {
                 console.error(e);
