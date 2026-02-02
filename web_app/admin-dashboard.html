@@ -332,13 +332,44 @@
                 <div id="farmersList"></div>
             </div>
         </div>
+
+        <!-- Edit Modal -->
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <h2>Edit Farmer</h2>
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="editName">
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="text" id="editPhone">
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="editLocation">
+                </div>
+                <div class="form-group">
+                    <label>Status (Unloading)</label>
+                    <select id="editStatus">
+                        <option value="pending">Pending</option>
+                        <option value="done">Done</option>
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                    <button class="btn" style="background:#eee;" onclick="closeModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, writeBatch, doc, deleteDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -505,17 +536,74 @@
 
             let html = '';
             filtered.slice(0, 50).forEach(f => {
-                html += `<div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
-                     <div>
+                html += `<div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                     <div style="flex:1;">
                          <div style="font-weight:bold;">${f.name}</div>
                          <div style="color:#777; font-size:13px;">${f.location} | 📞 ${f.phone} | ⚡ ${f.hp}HP</div>
                          <div style="font-size:10px; color:#aaa;">ID: ${f.id}</div>
                      </div>
-                     <div><span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status}</span></div>
+                     <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status}</span>
+                        <div>
+                            <button class="action-btn btn-edit" onclick="window.editFarmer('${f.id}')">✏️</button>
+                            <button class="action-btn btn-delete" onclick="window.deleteFarmer('${f.id}')">🗑️</button>
+                        </div>
+                     </div>
                  </div>`;
             });
             if (filtered.length > 50) html += `<div style="padding:10px;text-align:center;color:#999;">+ ${filtered.length - 50} more (use search)</div>`;
             list.innerHTML = html;
+        };
+
+        // --- EDIT & DELETE ACTIONS ---
+        window.editFarmer = (id) => {
+            const f = window.allFarmersData.find(x => x.id === id);
+            if (!f) return;
+
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = f.name;
+            document.getElementById('editPhone').value = f.phone;
+            document.getElementById('editLocation').value = f.location;
+            document.getElementById('editStatus').value = f.unloading_status;
+
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeModal = () => document.getElementById('editModal').classList.remove('active');
+
+        window.saveEdit = async () => {
+            const id = document.getElementById('editId').value;
+            const newData = {
+                BENEFICIARY_NAME: document.getElementById('editName').value, // Update source field too
+                name: document.getElementById('editName').value,
+                MOBILE_NO: document.getElementById('editPhone').value,
+                phone: document.getElementById('editPhone').value,
+                location: document.getElementById('editLocation').value,
+                unloading_status: document.getElementById('editStatus').value
+            };
+
+            try {
+                await updateDoc(doc(db, 'farmers_master', id), newData);
+                alert('Updated successfully!');
+                closeModal();
+                loadFarmers(); // Refresh list
+            } catch (e) {
+                alert('Error updating: ' + e.message);
+            }
+        };
+
+        window.deleteFarmer = async (id) => {
+            if (confirm('Are you sure you want to permanently delete this farmer?')) {
+                try {
+                    await deleteDoc(doc(db, 'farmers_master', id));
+                    // Remove locally to avoid full reload if possible, but loadFarmers is safer
+                    window.allFarmersData = window.allFarmersData.filter(x => x.id !== id);
+                    filterFarmers();
+                    alert('Farmer deleted.');
+                } catch (e) {
+                    alert('Error deleting: ' + e.message);
+                }
+            }
         };
 
         // --- FILE UPLOAD LOGIC ---
