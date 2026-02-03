@@ -1,6 +1,13 @@
 {
-  "version": 2,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/web_app/$1" }
-  ]
+    "version": 2,
+    "rewrites": [
+        {
+            "source": "/",
+            "destination": "/web_app/index.html"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/web_app/$1"
+        }
+    ]
 }
