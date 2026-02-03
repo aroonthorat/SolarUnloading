@@ -520,6 +520,17 @@
                     </div>
                 </div>
                 <div id="panelsScanned" class="hidden"></div>
+
+                <!-- Multiple Panel Controls -->
+                <div id="panelsActions" class="hidden"
+                    style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                    <p style="color:green; font-weight:bold;">✓ Panel Saved!</p>
+                    <button class="btn btn-secondary" style="width:100%; margin-bottom:10px;"
+                        onclick="addAnotherPanel()">➕ Scan Another Panel</button>
+                    <button class="btn btn-primary" style="width:100%;" onclick="finishPanels()">Next Step: Issues
+                        →</button>
+                </div>
+                <div id="extraPanelsList" style="margin-top:15px;"></div>
             </div>
 
             <!-- Issues -->
@@ -552,15 +563,26 @@
             <h2>Review & Sign</h2>
             <div id="reviewContent"></div>
 
+            <!-- Signatures -->
             <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px;">Farmer/Representative
-                    Signature:</label>
-                <canvas id="signature-pad" width="300" height="150"
-                    style="border:1px solid #ccc; background:white; width:100%; border-radius:4px; touch-action:none;"></canvas>
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Farmer Signature:</label>
+                <canvas id="signature-pad-farmer"
+                    style="border:1px solid #ccc; background:white; width:100%; height:300px; border-radius:4px; touch-action:none;"></canvas>
                 <div style="text-align:right; margin-top:5px;">
                     <button type="button"
                         style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
-                        onclick="clearSignature()">❌ Clear Signature</button>
+                        onclick="clearSignature('farmer')">❌ Clear</button>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Worker/Driver Signature:</label>
+                <canvas id="signature-pad-worker"
+                    style="border:1px solid #ccc; background:white; width:100%; height:300px; border-radius:4px; touch-action:none;"></canvas>
+                <div style="text-align:right; margin-top:5px;">
+                    <button type="button"
+                        style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
+                        onclick="clearSignature('worker')">❌ Clear</button>
                 </div>
             </div>
 
@@ -611,13 +633,18 @@
             controller: { qr: '', photo: null },
             pump: { qr: '', hp: '', photo: null },
             panels: { qr: '', type: '', photo: null },
+            extraPanels: [],
             issues: []
         };
         let html5QrCode = null;
         let currentScanning = null;
 
-        let signaturePad = null;
-        window.clearSignature = () => { if (signaturePad) signaturePad.clear(); };
+        let signaturePadFarmer = null;
+        let signaturePadWorker = null;
+        window.clearSignature = (type) => {
+            if (type === 'farmer' && signaturePadFarmer) signaturePadFarmer.clear();
+            if (type === 'worker' && signaturePadWorker) signaturePadWorker.clear();
+        };
 
         // Check auth
         onAuthStateChanged(auth, (user) => {
@@ -1056,9 +1083,51 @@
             } else if (type === 'pump') {
                 document.getElementById('panelsSection').classList.remove('hidden');
             } else if (type === 'panels') {
-                document.getElementById('issuesSection').classList.remove('hidden');
-                document.getElementById('reviewBtn').classList.remove('hidden');
+                document.getElementById('panelsActions').classList.remove('hidden');
+                setTimeout(() => document.getElementById('panelsActions').scrollIntoView({ behavior: 'smooth' }), 100);
             }
+        };
+
+        window.addAnotherPanel = () => {
+            if (!scannedData.panels.qr || !scannedData.panels.photo) {
+                alert("Please complete the current panel scan first.");
+                return;
+            }
+            scannedData.extraPanels.push({ ...scannedData.panels });
+
+            const list = document.getElementById('extraPanelsList');
+            const div = document.createElement('div');
+            div.className = 'scanned-item';
+            div.style.background = '#eef';
+            div.innerHTML = `<h4>Panel #${scannedData.extraPanels.length}</h4>
+                              <p>QR: ${scannedData.panels.qr}</p>
+                              <p>Type: ${scannedData.panels.type || '-'}</p>`;
+            list.appendChild(div);
+
+            // Reset
+            scannedData.panels = { qr: '', type: '', photo: null };
+            document.getElementById('panelType').value = '';
+            document.getElementById('panelsResult').classList.add('hidden');
+            document.getElementById('panelsScanned').innerHTML = '';
+            document.getElementById('panelsScanned').className = 'hidden';
+            document.getElementById('panelsActions').classList.add('hidden');
+            document.getElementById('panelsPhotoBtn').classList.add('hidden');
+            document.getElementById('panelsStatus').className = 'status-icon status-pending'; // Reset status icon? Optional.
+        };
+
+        window.finishPanels = () => {
+            if (!scannedData.panels.qr && scannedData.extraPanels.length > 0) {
+                // Move first extra to main if main is empty
+                scannedData.panels = scannedData.extraPanels.shift();
+                // Also need to clear it from list display? visual only, doesn't matter much.
+            } else if (!scannedData.panels.qr) {
+                alert("Please scan at least one panel.");
+                return;
+            }
+
+            document.getElementById('issuesSection').classList.remove('hidden');
+            document.getElementById('reviewBtn').classList.remove('hidden');
+            document.getElementById('issuesSection').scrollIntoView({ behavior: 'smooth' });
         };
 
         window.handleIssuePhotos = (input) => {
@@ -1125,22 +1194,22 @@
 
             updateProgress(3);
 
-            // Initialize Signature Pad
+            // Initialize Signature Pads
             setTimeout(() => {
-                const canvas = document.getElementById('signature-pad');
-                if (canvas && (!signaturePad || signaturePad.canvas !== canvas)) {
-                    // Handle High DPI
-                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                    canvas.width = canvas.offsetWidth * ratio;
-                    canvas.height = canvas.offsetHeight * ratio;
-                    canvas.getContext("2d").scale(ratio, ratio);
+                const initPad = (id) => {
+                    const canvas = document.getElementById(id);
+                    if (canvas) {
+                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                        canvas.width = canvas.offsetWidth * ratio;
+                        canvas.height = canvas.offsetHeight * ratio;
+                        canvas.getContext("2d").scale(ratio, ratio); // Handle Retina
+                        return new SignaturePad(canvas, { minWidth: 1, maxWidth: 3, backgroundColor: 'rgb(255, 255, 255)' });
+                    }
+                    return null;
+                };
 
-                    signaturePad = new SignaturePad(canvas, {
-                        minWidth: 1,
-                        maxWidth: 3,
-                        backgroundColor: 'rgb(255, 255, 255)'
-                    });
-                }
+                signaturePadFarmer = initPad('signature-pad-farmer');
+                signaturePadWorker = initPad('signature-pad-worker');
             }, 300);
         };
 
@@ -1148,9 +1217,15 @@
             const submitBtn = document.getElementById('submitBtn');
             const originalText = submitBtn.textContent;
 
-            // Validate Signature
-            if (!signaturePad || signaturePad.isEmpty()) {
-                alert("Please provide the farmer's signature.");
+
+
+            // Validate Signatures
+            if (!signaturePadFarmer || signaturePadFarmer.isEmpty()) {
+                alert("Please provide the Farmer's signature.");
+                return;
+            }
+            if (!signaturePadWorker || signaturePadWorker.isEmpty()) {
+                alert("Please provide the Worker/Driver's signature.");
                 return;
             }
 
@@ -1158,15 +1233,29 @@
             submitBtn.textContent = 'Uploading...';
 
             try {
-                // Upload Signature
-                const sigRef = ref(storage, `signatures/${Date.now()}_${selectedFarmer.id}.png`);
-                await uploadString(sigRef, signaturePad.toDataURL(), 'data_url');
-                const signatureUrl = await getDownloadURL(sigRef);
+                // Upload Signatures
+                const farmerRef = ref(storage, `signatures/farmer_${Date.now()}_${selectedFarmer.id}.png`);
+                await uploadString(farmerRef, signaturePadFarmer.toDataURL(), 'data_url');
+                const farmerSigUrl = await getDownloadURL(farmerRef);
+
+                const workerRef = ref(storage, `signatures/worker_${Date.now()}_${selectedFarmer.id}.png`);
+                await uploadString(workerRef, signaturePadWorker.toDataURL(), 'data_url');
+                const workerSigUrl = await getDownloadURL(workerRef);
 
                 // Upload photos
                 const controllerPhotoUrl = await uploadPhoto(scannedData.controller.photo, 'controller');
                 const pumpPhotoUrl = await uploadPhoto(scannedData.pump.photo, 'pump');
                 const panelsPhotoUrl = await uploadPhoto(scannedData.panels.photo, 'panels');
+
+                const extraPanelsData = [];
+                for (const p of scannedData.extraPanels) {
+                    const url = await uploadPhoto(p.photo, 'panels_extra');
+                    extraPanelsData.push({
+                        qr: p.qr,
+                        type: p.type,
+                        photo: url
+                    });
+                }
 
                 const issuePhotoUrls = [];
                 for (const photo of scannedData.issues) {
@@ -1198,11 +1287,14 @@
                         type: scannedData.panels.type,
                         photo: panelsPhotoUrl
                     },
+                    extra_panels: extraPanelsData,
                     issues: {
                         photos: issuePhotoUrls,
                         notes: document.getElementById('unloadingNotes').value.trim() // Capture Notes
                     },
-                    signature: signatureUrl,
+                    signature: farmerSigUrl,
+                    signature_farmer: farmerSigUrl,
+                    signature_worker: workerSigUrl,
                     worker_email: currentUser.email,
                     timestamp: serverTimestamp(),
                     location_gps: null // Could add geo in future
