@@ -2,11 +2,15 @@
     "version": 2,
     "rewrites": [
         {
+            "source": "/web_app/(.*)",
+            "destination": "/web_app/$1"
+        },
+        {
             "source": "/",
             "destination": "/web_app/index.html"
         },
         {
-            "source": "/(.*)",
+            "source": "/((?!web_app/).*)",
             "destination": "/web_app/$1"
         }
     ]
