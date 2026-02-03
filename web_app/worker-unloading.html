@@ -411,6 +411,25 @@
         <div class="card hidden" id="scanMaterialsStep">
             <div id="farmerInfoHeader" class="farmer-info"></div>
 
+            <div
+                style="margin-bottom:20px; padding:15px; background:#f8f9fa; border-radius:12px; border:1px solid #e9ecef;">
+                <h4 style="margin-bottom:10px; color:#555;">Document Details</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:12px; color:#666; font-weight:bold;">Invoice No</label>
+                        <input type="text" id="invoiceNo"
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"
+                            placeholder="e.g. INV-123">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#666; font-weight:bold;">Challan No</label>
+                        <input type="text" id="challanNo"
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"
+                            placeholder="e.g. CH-456">
+                    </div>
+                </div>
+            </div>
+
             <!-- Controller -->
             <div class="scan-section" id="controllerSection">
                 <div class="section-title">
@@ -1299,6 +1318,8 @@
                 // Save to Firestore
                 const unloadingData = {
                     farmer_id: selectedFarmer.id,
+                    invoice_no: document.getElementById('invoiceNo').value || '',
+                    challan_no: document.getElementById('challanNo').value || '',
                     farmer_name: selectedFarmer.name,
                     farmer_details: {
                         beneficiaryNo: selectedFarmer.BENEFICIARY_NO || '',
