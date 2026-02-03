@@ -623,7 +623,7 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL, uploadString } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL, uploadString, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         // import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
 
         const firebaseConfig = {
@@ -639,6 +639,83 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
+
+        // --- Production Helpers ---
+        async function compressImage(file, maxDimension = 1280, quality = 0.7) {
+            if (!file.type.match(/image.*/)) return file; // Skip non-images
+
+            const imageBitmap = await createImageBitmap(file);
+            const { width, height } = imageBitmap;
+            let targetWidth = width;
+            let targetHeight = height;
+
+            if (width > height && width > maxDimension) {
+                targetHeight = (height / width) * maxDimension;
+                targetWidth = maxDimension;
+            } else if (height > maxDimension) {
+                targetWidth = (width / height) * maxDimension;
+                targetHeight = maxDimension;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imageBitmap, 0, 0, targetWidth, targetHeight);
+
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    }));
+                }, 'image/jpeg', quality);
+            });
+        }
+
+        async function uploadWithRetry(storagePath, file, maxRetries = 3) {
+            const storageRef = ref(storage, storagePath);
+
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    return await new Promise((resolve, reject) => {
+                        const uploadTask = uploadBytesResumable(storageRef, file);
+
+                        uploadTask.on('state_changed',
+                            (snapshot) => {
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                console.log(`Upload ${progress.toFixed(2)}% complete`);
+                            },
+                            (error) => reject(error),
+                            async () => {
+                                const url = await getDownloadURL(uploadTask.snapshot.ref);
+                                resolve(url);
+                            }
+                        );
+                    });
+                } catch (error) {
+                    if (attempt === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, attempt) * 1000;
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
+        }
+
+        function getGeolocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    resolve(null); // Not supported
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (position) => resolve({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    }),
+                    (error) => resolve(null) // Fail safe
+                );
+            });
+        }
 
         // Initialize Vertex AI
         let vertexAI, geminiModel;
@@ -1284,23 +1361,44 @@
             submitBtn.textContent = 'Uploading...';
 
             try {
-                // Upload Signatures
-                const farmerRef = ref(storage, `signatures/farmer_${Date.now()}_${selectedFarmer.id}.png`);
+                // 1. Get Location
+                const location = await getGeolocation();
+
+                // 2. Prepare Paths
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const farmerId = selectedFarmer.id;
+                const unloadingId = `unload_${Date.now()}`;
+                const basePath = `uploads/${year}/${month}/${farmerId}/unloading/${unloadingId}`;
+
+                // 3. Upload Signatures
+                const farmerRef = ref(storage, `${basePath}/signatures/farmer.png`);
                 await uploadString(farmerRef, signaturePadFarmer.toDataURL(), 'data_url');
                 const farmerSigUrl = await getDownloadURL(farmerRef);
 
-                const workerRef = ref(storage, `signatures/worker_${Date.now()}_${selectedFarmer.id}.png`);
+                const workerRef = ref(storage, `${basePath}/signatures/worker.png`);
                 await uploadString(workerRef, signaturePadWorker.toDataURL(), 'data_url');
                 const workerSigUrl = await getDownloadURL(workerRef);
 
-                // Upload photos (Optional Check)
-                const controllerPhotoUrl = scannedData.controller.photo ? await uploadPhoto(scannedData.controller.photo, 'controller') : null;
-                const pumpPhotoUrl = scannedData.pump.photo ? await uploadPhoto(scannedData.pump.photo, 'pump') : null;
-                const panelsPhotoUrl = scannedData.panels.photo ? await uploadPhoto(scannedData.panels.photo, 'panels') : null;
+                // 4. Helper to Process & Upload Photos
+                const processAndUpload = async (file, name) => {
+                    if (!file) return null;
+                    const compressed = await compressImage(file);
+                    const path = `${basePath}/photos/${name}_${Date.now()}.jpg`;
+                    return await uploadWithRetry(path, compressed);
+                };
 
+                // Upload Main Photos
+                const controllerPhotoUrl = await processAndUpload(scannedData.controller.photo, 'controller');
+                const pumpPhotoUrl = await processAndUpload(scannedData.pump.photo, 'pump');
+                const panelsPhotoUrl = await processAndUpload(scannedData.panels.photo, 'panels');
+
+                // Upload Extra Panels
                 const extraPanelsData = [];
-                for (const p of scannedData.extraPanels) {
-                    const url = p.photo ? await uploadPhoto(p.photo, 'panels_extra') : null;
+                for (let i = 0; i < scannedData.extraPanels.length; i++) {
+                    const p = scannedData.extraPanels[i];
+                    const url = await processAndUpload(p.photo, `panel_extra_${i}`);
                     extraPanelsData.push({
                         qr: p.qr,
                         type: p.type,
@@ -1308,10 +1406,12 @@
                     });
                 }
 
+                // Upload Issue Photos
                 const issuePhotoUrls = [];
-                for (const photo of scannedData.issues) {
-                    const url = await uploadPhoto(photo, 'issues');
-                    issuePhotoUrls.push(url);
+                for (let i = 0; i < (scannedData.issues || []).length; i++) {
+                    const file = scannedData.issues[i];
+                    const url = await processAndUpload(file, `issue_${i}`);
+                    if (url) issuePhotoUrls.push(url);
                 }
 
                 // Save to Firestore
@@ -1341,31 +1441,37 @@
                         photo: panelsPhotoUrl
                     },
                     extra_panels: extraPanelsData,
-                    issues: {
-                        photos: issuePhotoUrls,
-                        notes: document.getElementById('unloadingNotes').value.trim() // Capture Notes
-                    },
-                    signature: farmerSigUrl,
+                    signature: farmerSigUrl, // legacy compat
                     signature_farmer: farmerSigUrl,
                     signature_worker: workerSigUrl,
+                    issues: {
+                        notes: document.getElementById('unloadingNotes').value.trim(),
+                        photos: issuePhotoUrls
+                    },
+                    location: location, // lat, lon
+                    unloaded_by: currentUser.uid,
+                    unloaded_by_name: currentUser.displayName || currentUser.email,
                     worker_email: currentUser.email,
-                    timestamp: serverTimestamp(),
-                    location_gps: null // Could add geo in future
+                    timestamp: serverTimestamp(), // Server-side
+                    createdAt: serverTimestamp() // Audit
                 };
 
+                // Save to 'unloading_records'
                 await addDoc(collection(db, 'unloading_records'), unloadingData);
 
-                // Update farmer status
-                await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {
-                    unloading_status: 'done',
-                    unloaded_by_email: currentUser.email,
-                    unloaded_by_uid: currentUser.uid,
-                    unloaded_at: serverTimestamp(),
-                    updatedAt: serverTimestamp()
-                });
+                // Update 'farmers_master' status
+                const farmerRefDoc = doc(db, 'farmers_master', selectedFarmer.id);
+                try {
+                    await updateDoc(farmerRefDoc, {
+                        unloading_status: 'done',
+                        unloaded_by_email: currentUser.email,
+                        unloaded_by_uid: currentUser.uid,
+                        unloaded_at: serverTimestamp(),
+                        last_updated: serverTimestamp()
+                    });
+                } catch (e) { console.warn("Master update warn", e); }
 
-                updateProgress(4);
-                alert('✓ Unloading completed successfully!');
+                alert("Unloading Data Uploaded Successfully! ✅");
                 window.location.href = 'home.html';
             } catch (error) {
                 console.error('Error:', error);
