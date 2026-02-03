@@ -441,6 +441,9 @@
                         <button class="btn btn-secondary" style="flex:1"
                             onclick="document.getElementById('controllerFile').click()">🖼️ Gallery</button>
                     </div>
+                    <button class="btn btn-secondary"
+                        style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
+                        onclick="skipPhoto('controller')">Skip Photo & Continue →</button>
                 </div>
                 <div id="controllerScanned" class="hidden"></div>
             </div>
@@ -481,6 +484,9 @@
                         <button class="btn btn-secondary" style="flex:1"
                             onclick="document.getElementById('pumpFile').click()">🖼️ Gallery</button>
                     </div>
+                    <button class="btn btn-secondary"
+                        style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
+                        onclick="skipPhoto('pump')">Skip Photo & Continue →</button>
                 </div>
                 <div id="pumpScanned" class="hidden"></div>
             </div>
@@ -518,6 +524,9 @@
                         <button class="btn btn-secondary" style="flex:1"
                             onclick="document.getElementById('panelsFile').click()">🖼️ Gallery</button>
                     </div>
+                    <button class="btn btn-secondary"
+                        style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
+                        onclick="skipPhoto('panels')">Skip Photo & Continue →</button>
                 </div>
                 <div id="panelsScanned" class="hidden"></div>
 
@@ -1130,6 +1139,40 @@
             document.getElementById('issuesSection').scrollIntoView({ behavior: 'smooth' });
         };
 
+        window.skipPhoto = (type) => {
+            const scannedDiv = document.getElementById(`${type}Scanned`);
+            scannedDiv.classList.remove('hidden');
+            scannedDiv.className = 'scanned-item';
+
+            let data = scannedData[type];
+            let qr = data.qr;
+            let hp = data.hp;
+            let pType = data.type;
+
+            scannedDiv.innerHTML = `
+                <h4>✓ ${type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
+                <p>QR: ${qr}</p>
+                ${hp ? `<p>HP: ${hp}</p>` : ''}
+                ${pType ? `<p>Type: ${pType}</p>` : ''}
+                <p style="color:orange;">⚠ Photo Skipped</p>
+            `;
+            document.getElementById(`${type}Status`).className = 'status-icon status-done';
+
+            // Hide buttons
+            document.getElementById(`${type}PhotoBtn`).classList.add('hidden');
+
+            if (type === 'controller') {
+                document.getElementById('pumpSection').classList.remove('hidden');
+                setTimeout(() => document.getElementById('pumpSection').scrollIntoView({ behavior: 'smooth' }), 100);
+            } else if (type === 'pump') {
+                document.getElementById('panelsSection').classList.remove('hidden');
+                setTimeout(() => document.getElementById('panelsSection').scrollIntoView({ behavior: 'smooth' }), 100);
+            } else if (type === 'panels') {
+                document.getElementById('panelsActions').classList.remove('hidden');
+                setTimeout(() => document.getElementById('panelsActions').scrollIntoView({ behavior: 'smooth' }), 100);
+            }
+        };
+
         window.handleIssuePhotos = (input) => {
             if (!input) return;
             const newFiles = Array.from(input.files);
@@ -1242,10 +1285,10 @@
                 await uploadString(workerRef, signaturePadWorker.toDataURL(), 'data_url');
                 const workerSigUrl = await getDownloadURL(workerRef);
 
-                // Upload photos
-                const controllerPhotoUrl = await uploadPhoto(scannedData.controller.photo, 'controller');
-                const pumpPhotoUrl = await uploadPhoto(scannedData.pump.photo, 'pump');
-                const panelsPhotoUrl = await uploadPhoto(scannedData.panels.photo, 'panels');
+                // Upload photos (Optional Check)
+                const controllerPhotoUrl = scannedData.controller.photo ? await uploadPhoto(scannedData.controller.photo, 'controller') : null;
+                const pumpPhotoUrl = scannedData.pump.photo ? await uploadPhoto(scannedData.pump.photo, 'pump') : null;
+                const panelsPhotoUrl = scannedData.panels.photo ? await uploadPhoto(scannedData.panels.photo, 'panels') : null;
 
                 const extraPanelsData = [];
                 for (const p of scannedData.extraPanels) {
