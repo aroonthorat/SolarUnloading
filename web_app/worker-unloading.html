@@ -632,7 +632,7 @@
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL, uploadString, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-        // import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
+        import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -727,10 +727,10 @@
 
         // Initialize Vertex AI
         let vertexAI, geminiModel;
-        // try {
-        //     vertexAI = getVertexAI(app);
-        //     geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
-        // } catch (e) { console.warn("Gemini init failed:", e); }
+        try {
+            vertexAI = getVertexAI(app);
+            geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
+        } catch (e) { console.warn("Gemini init failed:", e); }
 
         let currentUser = null;
         let selectedFarmer = null;
@@ -1080,7 +1080,7 @@
 
                         // Handle result
                         console.log("Gemini Scan Result:", text);
-                        handleQRScanned(text.replace(/['"`]/g, '').trim(), type);
+                        handleQRScanned(type, text.replace(/['"`]/g, '').trim());
 
                         btn.innerHTML = "✅ Found!";
                         setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
