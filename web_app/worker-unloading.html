@@ -443,6 +443,14 @@
                         style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
                         AI Scan</button>
                 </div>
+
+                <div style="margin-bottom:10px; display:flex; gap:5px; align-items:center;">
+                    <span style="font-size:12px; color:#aaa;">OR</span>
+                    <input type="text" id="manualControllerInput" placeholder="Type Controller Serial No"
+                        style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
+                        onclick="handleManualEntry('controller')">✓ OK</button>
+                </div>
                 <!-- Hidden input for Gemini -->
                 <input type="file" id="geminiInput" accept="image/*" class="hidden">
 
@@ -1146,6 +1154,14 @@
             setTimeout(() => {
                 document.getElementById(`${type}PhotoBtn`).scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
+        };
+
+        window.handleManualEntry = (type) => {
+            if (type === 'controller') {
+                const val = document.getElementById('manualControllerInput').value.trim();
+                if (!val) return alert("Please type a valid serial number.");
+                handleQRScanned('controller', val);
+            }
         };
 
         window.handlePhoto = async (type, input) => {
