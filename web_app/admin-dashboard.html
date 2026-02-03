@@ -313,7 +313,7 @@
     <div class="sidebar">
         <div class="logo">
             ☀️ SolarTrack PRO
-            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.22</div>
+            <div style="font-size:12px; color:#666; font-weight:400; margin-top:5px;">App Version: v3.23</div>
         </div>
         <div class="nav-item active" onclick="showTab('dashboard')" id="nav-dashboard">📊 Dashboard</div>
         <div class="nav-item" onclick="showTab('upload')" id="nav-upload">📤 Upload Data</div>
@@ -337,8 +337,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.22
-                            (Fix Opt Photos)</span></h2>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.23
+                            (Release Ready)</span></h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
                 <div style="text-align:right;">
@@ -1214,10 +1214,11 @@
                         "Unloaded By": uData ? (uData.unloaded_by_name || uData.worker_email) : '-',
                         "Controller QR": uData?.controller?.qr || '-',
                         "Pump QR": uData?.pump?.qr || '-',
-                        "Panel QR": uData?.panels?.qr || '-',
+                        "Panel QR": uData ? [uData.panels?.qr, ...(uData.extra_panels || []).map(p => p.qr)].filter(Boolean).join(', ') : '-',
                         "Photo: Controller": uData?.controller?.photo || '',
                         "Photo: Pump": uData?.pump?.photo || '',
-                        "Photo: Panels": uData?.panels?.photo || '',
+                        "Photo: Panels": uData ? [uData.panels?.photo, ...(uData.extra_panels || []).map(p => p.photo)].filter(Boolean).join(', ') : '',
+                        "Photo: Issues": uData?.issues?.photos ? uData.issues.photos.join(', ') : '',
 
                         "Installation Status": (f.installation_status || 'pending').toUpperCase(),
                         "Installation Date": iData ? fmtDate(iData.timestamp) : '-',
@@ -1355,30 +1356,34 @@
                 y = doc.lastAutoTable.finalY + 15;
 
                 // SIGNATURE SECTION
-                if (unloadData && unloadData.signature) {
-                    // Check page break
+                // SIGNATURE SECTION
+                const sigFarmer = unloadData?.signature_farmer || unloadData?.signature;
+                const sigWorker = unloadData?.signature_worker;
+
+                if (sigFarmer || sigWorker) {
                     if (y + 40 > doc.internal.pageSize.height) { doc.addPage(); y = 20; }
 
-                    doc.setFontSize(12);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text("Authorized Signature:", 14, y);
-                    y += 5;
-
-                    try {
-                        const sigBase64 = await getBase64FromUrl(unloadData.signature);
-                        if (sigBase64) {
-                            doc.addImage(sigBase64, "PNG", 14, y, 60, 30);
-                            y += 35;
-                        } else {
-                            doc.setFontSize(10);
-                            doc.setTextColor(255, 0, 0);
-                            doc.text("(Signature Image Error - Click to View)", 14, y);
-                            doc.link(14, y - 5, 100, 10, { url: unloadData.signature });
-                            y += 10;
-                        }
-                    } catch (err) {
-                        console.warn("Signature load error", err);
+                    // Farmer Signature
+                    if (sigFarmer) {
+                        doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+                        doc.text("Farmer Signature:", 14, y);
+                        try {
+                            const b64 = await getBase64FromUrl(sigFarmer);
+                            if (b64) doc.addImage(b64, "PNG", 14, y + 2, 60, 30);
+                        } catch (e) { }
                     }
+
+                    // Worker Signature
+                    if (sigWorker) {
+                        doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+                        doc.text("Worker Signature:", 100, y);
+                        try {
+                            const b64 = await getBase64FromUrl(sigWorker);
+                            if (b64) doc.addImage(b64, "PNG", 100, y + 2, 60, 30);
+                        } catch (e) { }
+                    }
+
+                    y += 35;
                 }
 
                 // PHOTOS SECTION
@@ -1397,7 +1402,19 @@
                 if (unloadData) {
                     if (unloadData.controller?.photo) photoList.push({ label: "Controller", url: unloadData.controller.photo });
                     if (unloadData.pump?.photo) photoList.push({ label: "Pump", url: unloadData.pump.photo });
-                    if (unloadData.panels?.photo) photoList.push({ label: "Panels", url: unloadData.panels.photo });
+                    if (unloadData.panels?.photo) photoList.push({ label: "Panels (Main)", url: unloadData.panels.photo });
+
+                    if (unloadData.extra_panels && Array.isArray(unloadData.extra_panels)) {
+                        unloadData.extra_panels.forEach((p, i) => {
+                            if (p.photo) photoList.push({ label: `Panel #${i + 2}`, url: p.photo });
+                        });
+                    }
+
+                    if (unloadData.issues?.photos && Array.isArray(unloadData.issues.photos)) {
+                        unloadData.issues.photos.forEach((url, i) => {
+                            photoList.push({ label: `Issue/Note #${i + 1}`, url: url });
+                        });
+                    }
                 }
                 if (installData) {
                     const photos = installData.photos || installData.photoUrls || installData.images || [];
