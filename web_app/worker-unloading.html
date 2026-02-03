@@ -505,13 +505,7 @@
                         AI Scan</button>
                 </div>
                 <div id="panelsResult" class="hidden scan-result"></div>
-                <select id="panelType" class="hidden">
-                    <option value="">Select Panel Type...</option>
-                    <option value="Poly 335W">Polycrystalline 335W</option>
-                    <option value="Poly 350W">Polycrystalline 350W</option>
-                    <option value="Mono 400W">Monocrystalline 400W</option>
-                    <option value="Mono 450W">Monocrystalline 450W</option>
-                </select>
+
                 <input type="file" id="panelsCam" accept="image/*" capture="environment" class="hidden"
                     onchange="handlePhoto('panels', this)">
                 <input type="file" id="panelsFile" accept="image/*" class="hidden"
@@ -1048,8 +1042,6 @@
             // Show HP/Type selector and photo button
             if (type === 'pump') {
                 document.getElementById('pumpHP').classList.remove('hidden');
-            } else if (type === 'panels') {
-                document.getElementById('panelType').classList.remove('hidden');
             }
 
             document.getElementById(`${type}PhotoBtn`).classList.remove('hidden');
@@ -1069,8 +1061,6 @@
             // Get HP/Type if needed
             if (type === 'pump') {
                 scannedData.pump.hp = document.getElementById('pumpHP').value;
-            } else if (type === 'panels') {
-                scannedData.panels.type = document.getElementById('panelType').value;
             }
 
             // Show scanned confirmation
