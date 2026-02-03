@@ -1088,7 +1088,7 @@
         };
 
         window.addAnotherPanel = () => {
-            if (!scannedData.panels.qr || !scannedData.panels.photo) {
+            if (!scannedData.panels.qr) {
                 alert("Please complete the current panel scan first.");
                 return;
             }
@@ -1282,7 +1282,7 @@
 
                 const extraPanelsData = [];
                 for (const p of scannedData.extraPanels) {
-                    const url = await uploadPhoto(p.photo, 'panels_extra');
+                    const url = p.photo ? await uploadPhoto(p.photo, 'panels_extra') : null;
                     extraPanelsData.push({
                         qr: p.qr,
                         type: p.type,
