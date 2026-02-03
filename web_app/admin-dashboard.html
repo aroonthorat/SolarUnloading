@@ -543,11 +543,31 @@
         }
 
         // Auth
-        onAuthStateChanged(auth, (user) => {
-            if (!user || user.email !== 'test@example.com') {
+        // Auth
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
+
+            // Check Admin Claim for debugging
+            try {
+                const token = await user.getIdTokenResult();
+                console.log("Auth Token Claims:", token.claims);
+                if (!token.claims.admin) {
+                    console.warn("⚠️ You do NOT have the 'admin' custom claim. Write/Delete operations will be blocked by Security Rules.");
+                    // Optional: Show warning banner
+                    const banner = document.createElement('div');
+                    banner.innerHTML = `<div style="background:#ffcc00; color:black; padding:10px; text-align:center;">
+                        ⚠️ <b>Admin Access Restricted:</b> You are logged in, but your account is not marked as an Admin. 
+                        Writ/Delete actions will fail. Run <code>node grant_admin.js ${user.email}</code> locally to fix this.
+                    </div>`;
+                    document.body.prepend(banner);
+                }
+            } catch (e) {
+                console.warn("Error fetching token result:", e);
+            }
+
             if (document.getElementById('userName')) document.getElementById('userName').textContent = user.email;
             loadDashboard();
         });
