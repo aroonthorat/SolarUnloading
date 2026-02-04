@@ -352,7 +352,7 @@
     <div class="header">
         <button class="back-btn" onclick="window.location.href='home.html'">←</button>
         <h1>📦 Material Unloading <span
-                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.28</span>
+                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.29</span>
         </h1>
     </div>
 
@@ -763,6 +763,108 @@
             if (type === 'worker' && signaturePadWorker) signaturePadWorker.clear();
         };
 
+        // --- AUTO SAVE FUNCTIONS ---
+        window.saveDraft = () => {
+            if (!selectedFarmer) return;
+            // Note: We cannot save File objects (photos) to localStorage.
+            // We save the text data (QR codes, HP, etc).
+            // When restoring, photos will be null, and user might need to re-take them.
+            const draft = {
+                data: {
+                    controller: { qr: scannedData.controller.qr }, // No photo
+                    pump: { qr: scannedData.pump.qr, hp: scannedData.pump.hp },
+                    panels: { qr: scannedData.panels.qr, type: scannedData.panels.type },
+                    extraPanels: scannedData.extraPanels.map(p => ({ qr: p.qr, type: p.type })),
+                    issues: [] // Photos lost
+                },
+                step: 2, // Always resume at scanning
+                timestamp: Date.now()
+            };
+            localStorage.setItem(`unloading_draft_${selectedFarmer.id}`, JSON.stringify(draft));
+            console.log("Draft Auto-Saved");
+        };
+
+        window.restoreDraft = (draft) => {
+            console.log("Restoring Draft...", draft);
+            // Restore Data
+            scannedData.controller.qr = draft.data.controller.qr;
+            scannedData.pump.qr = draft.data.pump.qr;
+            scannedData.pump.hp = draft.data.pump.hp;
+            scannedData.panels.qr = draft.data.panels.qr;
+            scannedData.panels.type = draft.data.panels.type;
+            scannedData.extraPanels = draft.data.extraPanels || [];
+
+            // Move to Step 2
+            document.getElementById('selectFarmerStep').classList.add('hidden');
+            document.getElementById('scanMaterialsStep').classList.remove('hidden');
+
+            // Update Header
+            document.getElementById('farmerInfoHeader').innerHTML = `
+                <div class="farmer-name">${selectedFarmer.name}</div>
+                <div class="farmer-details">
+                    <div class="detail-item">📍 ${selectedFarmer.location}</div>
+                    <div class="detail-item">⚡ ${selectedFarmer.hp} HP</div>
+                </div>
+            `;
+            updateProgress(2);
+
+            // Re-render Progress (Simulate Scans)
+            if (scannedData.controller.qr) {
+                const resDiv = document.getElementById('controllerResult');
+                resDiv.textContent = `Serial: ${scannedData.controller.qr}`;
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('scan-result');
+                // Flag photo missing?
+                if (!scannedData.controller.photo) {
+                    // Keep photo buttons visible
+                }
+            }
+            if (scannedData.pump.qr) {
+                const resDiv = document.getElementById('pumpResult');
+                resDiv.textContent = `Serial: ${scannedData.pump.qr}`;
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('scan-result');
+                document.getElementById('pumpHP').classList.remove('hidden');
+                if (scannedData.pump.hp) document.getElementById('pumpHP').value = scannedData.pump.hp;
+                document.getElementById('pumpSection').classList.remove('hidden'); // Show Next
+            }
+            if (scannedData.panels.qr) {
+                const resDiv = document.getElementById('panelsResult');
+                resDiv.textContent = `Serial: ${scannedData.panels.qr}`;
+                resDiv.classList.remove('hidden');
+
+                // Panels are done (no photo needed now)
+                document.getElementById('panelsSection').classList.remove('hidden');
+                document.getElementById('panelsActions').classList.remove('hidden');
+
+                const scannedDiv = document.getElementById('panelsScanned');
+                scannedDiv.innerHTML = `<h4>✓ Panel Scanned</h4><p>QR: ${scannedData.panels.qr}</p><small style="color:blue">(Restored from draft)</small>`;
+                scannedDiv.classList.remove('hidden');
+                scannedDiv.className = 'scanned-item';
+
+                document.getElementById('panelsStatus').className = 'status-icon status-done';
+            }
+
+            // Render Extras
+            if (scannedData.extraPanels.length > 0) {
+                const list = document.getElementById('extraPanelsList');
+                list.innerHTML = '';
+                scannedData.extraPanels.forEach((p, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'scanned-item';
+                    div.style.background = '#eef';
+                    div.innerHTML = `<h4>Panel #${idx + 1}</h4><p>QR: ${p.qr}</p><small>(Restored)</small>`;
+                    list.appendChild(div);
+                });
+            }
+
+            alert("Draft Restored! Note: You may need to retake photos for Controller/Pump if they weren't uploaded.");
+        };
+
+        window.clearDraft = () => {
+            if (selectedFarmer) localStorage.removeItem(`unloading_draft_${selectedFarmer.id}`);
+        };
+
         // Check auth
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -1044,9 +1146,22 @@
         window.startScanning = () => {
             if (!selectedFarmer) {
                 alert("Please select a farmer from the list first! 👇");
-                // Shake animation or highlight list
                 document.getElementById('farmerSearch').focus();
                 return;
+            }
+
+            // AUTO-SAVE CHECK
+            const draftKey = `unloading_draft_${selectedFarmer.id}`;
+            const savedDraft = localStorage.getItem(draftKey);
+
+            if (savedDraft) {
+                const useDraft = confirm(`Found unfinished work for ${selectedFarmer.name}. Resume where you left off?`);
+                if (useDraft) {
+                    restoreDraft(JSON.parse(savedDraft));
+                    return; // restoreDraft handles the UI switch
+                } else {
+                    localStorage.removeItem(draftKey); // Clear if they say "No"
+                }
             }
 
             document.getElementById('selectFarmerStep').classList.add('hidden');
@@ -1156,6 +1271,7 @@
 
         window.handleQRScanned = (type, qrCode) => {
             scannedData[type].qr = qrCode;
+            saveDraft(); // Auto-Save trigger
 
             // Show result immediately
             const resDiv = document.getElementById(`${type}Result`);
@@ -1238,6 +1354,7 @@
                 document.getElementById('panelsActions').classList.remove('hidden');
                 setTimeout(() => document.getElementById('panelsActions').scrollIntoView({ behavior: 'smooth' }), 100);
             }
+            saveDraft(); // Auto-Save
         };
 
         window.addAnotherPanel = () => {
@@ -1264,6 +1381,8 @@
             document.getElementById('panelsActions').classList.add('hidden');
             document.getElementById('panelsPhotoBtn').classList.add('hidden');
             document.getElementById('panelsStatus').className = 'status-icon status-pending'; // Reset status icon? Optional.
+
+            saveDraft(); // Auto-Save
         };
 
         window.finishPanels = () => {
@@ -1529,6 +1648,7 @@
                 } catch (e) { console.warn("Master update warn", e); }
 
                 alert("Unloading Data Uploaded Successfully! ✅");
+                clearDraft(); // Clear Draft
                 window.location.href = 'home.html';
             } catch (error) {
                 console.error('Error:', error);
