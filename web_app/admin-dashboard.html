@@ -1252,31 +1252,56 @@
         }
 
         window.uploadStaging = async () => {
-            const btn = document.querySelector('button[onclick="uploadStaging()"]');
-            if (btn) { btn.innerText = "Uploading..."; btn.disabled = true; }
+            const btn = document.querySelector('button[onclick="uploadStaging()"]'); // Note: selector might be fragile if multiple buttons
+            const statusDiv = document.createElement('div');
+            statusDiv.style.marginTop = '10px';
+            statusDiv.style.fontWeight = 'bold';
+            if (btn) {
+                btn.disabled = true;
+                btn.parentNode.appendChild(statusDiv);
+            }
 
-            let batch = writeBatch(db);
-            let count = 0;
-            let batchSize = 0;
+            try {
+                let batch = writeBatch(db);
+                let count = 0;
+                let batchSize = 0;
+                const total = stagingData.length;
 
-            for (let d of stagingData) {
-                const ref = doc(collection(db, 'farmers_master'));
-                batch.set(ref, d);
-                batchSize++;
-                count++;
+                for (let d of stagingData) {
+                    const ref = doc(collection(db, 'farmers_master'));
+                    batch.set(ref, d);
+                    batchSize++;
+                    count++;
 
-                // Batch limit is 500
-                if (batchSize >= 400) {
+                    // Batch limit is 500
+                    if (batchSize >= 400) {
+                        statusDiv.innerText = `Uploading chunk... (${count} / ${total})`;
+                        await batch.commit();
+                        batch = writeBatch(db);
+                        batchSize = 0;
+                        // Small delay to be nice to Firestore
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                }
+                if (batchSize > 0) {
+                    statusDiv.innerText = `Finalizing... (${count} / ${total})`;
                     await batch.commit();
-                    batch = writeBatch(db);
-                    batchSize = 0;
+                }
+
+                alert(`Success! Uploaded ${count} records.`);
+                document.getElementById('filePreview').innerHTML = "";
+                showTab('farmers');
+
+            } catch (err) {
+                console.error("Upload Failed", err);
+                alert("Upload Failed: " + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = "Retry Upload";
+                    statusDiv.innerText = "Error: " + err.message;
+                    statusDiv.style.color = "red";
                 }
             }
-            if (batchSize > 0) await batch.commit();
-
-            alert(`Uploaded ${count} records successfully!`);
-            document.getElementById('filePreview').innerHTML = "";
-            showTab('farmers');
         };
 
         window.downloadTemplate = () => {
