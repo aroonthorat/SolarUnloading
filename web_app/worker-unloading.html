@@ -1888,18 +1888,20 @@
                 // Upload Main Photos
                 const controllerPhotoUrl = await processAndUpload(scannedData.controller.photo, 'controller');
                 const pumpPhotoUrl = await processAndUpload(scannedData.pump.photo, 'pump');
-                const panelsPhotoUrl = await processAndUpload(scannedData.panels.photo, 'panels');
+                const motorPhotoUrl = await processAndUpload(scannedData.motor.photo, 'motor');
 
-                // Upload Extra Panels
-                const extraPanelsData = [];
-                for (let i = 0; i < scannedData.extraPanels.length; i++) {
-                    const p = scannedData.extraPanels[i];
-                    const url = await processAndUpload(p.photo, `panel_extra_${i}`);
-                    extraPanelsData.push({
-                        qr: p.qr,
-                        type: p.type,
-                        photo: url
-                    });
+                // Upload All Panels (New Array Structure)
+                const panelsData = [];
+                if (scannedData.panels && Array.isArray(scannedData.panels)) {
+                    for (let i = 0; i < scannedData.panels.length; i++) {
+                        const panel = scannedData.panels[i];
+                        if (panel.qr) { // Only include panels with QR codes
+                            panelsData.push({
+                                index: panel.index,
+                                qr: panel.qr
+                            });
+                        }
+                    }
                 }
 
                 // Upload Issue Photos
@@ -1936,12 +1938,9 @@
                         qr: scannedData.motor.qr || '',
                         photo: motorPhotoUrl || ''
                     },
-                    panels: {
-                        qr: scannedData.panels.qr,
-                        type: scannedData.panels.type,
-                        photo: panelsPhotoUrl
-                    },
-                    extra_panels: extraPanelsData,
+                    panels: panelsData, // Array of all panels
+                    panels_count: panelsData.length,
+                    expected_panels: scannedData.expectedPanels || 0,
                     signature: farmerSigUrl, // legacy compat
                     signature_farmer: farmerSigUrl,
                     signature_worker: workerSigUrl,
