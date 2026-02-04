@@ -236,6 +236,28 @@
             align-items: center;
             justify-content: center;
         }
+
+        /* Print Styles - Hide Images in PDF */
+        @media print {
+            .photo-grid {
+                display: none !important;
+            }
+
+            h4:contains("Photos"),
+            h4:contains("Installation Photos"),
+            h4:contains("Issue Photos") {
+                display: none !important;
+            }
+
+            /* Also hide edit button when printing */
+            button {
+                display: none !important;
+            }
+
+            .back-btn {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -632,6 +654,21 @@
         window.closeLightbox = () => {
             document.getElementById('lightbox').classList.remove('active');
         };
+
+        // Hide photo sections when printing/generating PDF
+        window.addEventListener('beforeprint', () => {
+            document.querySelectorAll('h4').forEach(h4 => {
+                if (h4.textContent.includes('Photos') || h4.textContent.includes('Installation Photos') || h4.textContent.includes('Issue Photos')) {
+                    h4.style.display = 'none';
+                }
+            });
+        });
+
+        window.addEventListener('afterprint', () => {
+            document.querySelectorAll('h4').forEach(h4 => {
+                h4.style.display = '';
+            });
+        });
     </script>
 </body>
 
