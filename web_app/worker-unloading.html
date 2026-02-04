@@ -1615,10 +1615,16 @@
 
         // Update panel progress counter
         window.updatePanelProgress = () => {
+            if (!scannedData.panels || !Array.isArray(scannedData.panels)) {
+                return; // Not initialized yet
+            }
+
             const filled = scannedData.panels.filter(p => p.qr).length;
-            const expected = scannedData.expectedPanels;
+            const expected = scannedData.expectedPanels || 0;
 
             const counter = document.getElementById('panelCounter');
+            if (!counter) return; // Element not found
+
             counter.textContent = `${filled} / ${expected}`;
 
             if (filled === 0) {
@@ -1639,6 +1645,11 @@
 
         window.finishPanels = () => {
             // Validation
+            if (!scannedData.panels || !Array.isArray(scannedData.panels)) {
+                alert("Please select Pump HP first to generate panel grid.");
+                return;
+            }
+
             const filled = scannedData.panels.filter(p => p.qr).length;
             const expected = scannedData.expectedPanels || 0;
 
