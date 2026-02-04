@@ -352,7 +352,7 @@
     <div class="header">
         <button class="back-btn" onclick="window.location.href='home.html'">←</button>
         <h1>📦 Material Unloading <span
-                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.25</span>
+                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.26</span>
         </h1>
     </div>
 
@@ -484,6 +484,14 @@
                     <span>Pump</span>
                 </div>
                 <div id="qrReaderPump" class="hidden"></div>
+                <!-- Manual Input Pump -->
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
+                    <span style="font-size:12px; color:#aaa;">OR</span>
+                    <input type="text" id="manualPumpInput" placeholder="Type Pump Serial No"
+                        style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
+                        onclick="handleManualEntry('pump')">✓ OK</button>
+                </div>
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <button class="btn btn-secondary" onclick="scanQR('pump')" style="flex:1;">📷 Scan QR</button>
                     <button class="btn btn-primary" onclick="scanWithGemini('pump')"
@@ -527,6 +535,14 @@
                     <span>Solar Panels</span>
                 </div>
                 <div id="qrReaderPanels" class="hidden"></div>
+                <!-- Manual Input Panels -->
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
+                    <span style="font-size:12px; color:#aaa;">OR</span>
+                    <input type="text" id="manualPanelsInput" placeholder="Type Panel Serial No"
+                        style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
+                        onclick="handleManualEntry('panels')">✓ OK</button>
+                </div>
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
                     <button class="btn btn-primary" onclick="scanWithGemini('panels')"
@@ -535,22 +551,7 @@
                 </div>
                 <div id="panelsResult" class="hidden scan-result"></div>
 
-                <input type="file" id="panelsCam" accept="image/*" capture="environment" class="hidden"
-                    onchange="handlePhoto('panels', this)">
-                <input type="file" id="panelsFile" accept="image/*" class="hidden"
-                    onchange="handlePhoto('panels', this)">
-
-                <div class="hidden" id="panelsPhotoBtn" style="margin-top:10px;">
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-secondary" style="flex:1"
-                            onclick="document.getElementById('panelsCam').click()">📸 Camera</button>
-                        <button class="btn btn-secondary" style="flex:1"
-                            onclick="document.getElementById('panelsFile').click()">🖼️ Gallery</button>
-                    </div>
-                    <button class="btn btn-secondary"
-                        style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
-                        onclick="skipPhoto('panels')">Skip Photo & Continue →</button>
-                </div>
+                <!-- Panel Photos Removed -->
                 <div id="panelsScanned" class="hidden"></div>
 
                 <!-- Multiple Panel Controls -->
@@ -1133,8 +1134,8 @@
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
+                        fps: 30, // Increased for speed
+                        qrbox: { width: 300, height: 250 }, // Wider for barcodes
                         // Support both QR codes and regular barcodes
                         formatsToSupport: [
                             Html5QrcodeSupportedFormats.QR_CODE,
@@ -1170,25 +1171,44 @@
                 resDiv.classList.add('scan-result'); // Ensure class is applied
             }
 
+            // Special Logic per Type
+            if (type === 'panels') {
+                document.getElementById('panelsActions').classList.remove('hidden');
+                document.getElementById('panelsStatus').className = 'status-icon status-done';
+                const scannedDiv = document.getElementById('panelsScanned');
+                scannedDiv.innerHTML = `<h4>✓ Panel Scanned</h4><p>QR: ${qrCode}</p>`;
+                scannedDiv.classList.remove('hidden');
+                scannedDiv.className = 'scanned-item';
+                setTimeout(() => document.getElementById('panelsActions').scrollIntoView({ behavior: 'smooth' }), 100);
+                return;
+            }
+
             // Show HP/Type selector and photo button
             if (type === 'pump') {
                 document.getElementById('pumpHP').classList.remove('hidden');
             }
 
-            document.getElementById(`${type}PhotoBtn`).classList.remove('hidden');
-
-            // Auto scroll to next step
-            setTimeout(() => {
-                document.getElementById(`${type}PhotoBtn`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
+            const photoBtn = document.getElementById(`${type}PhotoBtn`);
+            if (photoBtn) {
+                photoBtn.classList.remove('hidden');
+                // Auto scroll
+                setTimeout(() => {
+                    photoBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
         };
 
         window.handleManualEntry = (type) => {
-            if (type === 'controller') {
-                const val = document.getElementById('manualControllerInput').value.trim();
-                if (!val) return alert("Please type a valid serial number.");
-                handleQRScanned('controller', val);
-            }
+            let inputId = '';
+            if (type === 'controller') inputId = 'manualControllerInput';
+            if (type === 'pump') inputId = 'manualPumpInput';
+            if (type === 'panels') inputId = 'manualPanelsInput';
+
+            if (!inputId) return;
+
+            const val = document.getElementById(inputId).value.trim();
+            if (!val) return alert("Please type a valid serial number.");
+            handleQRScanned(type, val);
         };
 
         window.handlePhoto = async (type, input) => {
