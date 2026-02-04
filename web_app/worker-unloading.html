@@ -884,7 +884,14 @@
         };
 
         window.filterFarmers = (e) => {
-            const term = document.getElementById('farmerSearch').value.toLowerCase();
+            const term = document.getElementById('farmerSearch').value.toLowerCase().trim();
+
+            // If empty, reset list
+            if (!term) {
+                renderFarmerList(allFarmers.slice(0, 100));
+                return;
+            }
+
             const filtered = allFarmers.filter(f =>
                 (f.name || '').toLowerCase().includes(term) ||
                 (f.phone || '').includes(term) ||
