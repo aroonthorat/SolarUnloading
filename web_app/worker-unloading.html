@@ -352,7 +352,7 @@
     <div class="header">
         <button class="back-btn" onclick="window.location.href='home.html'">←</button>
         <h1>📦 Material Unloading <span
-                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.29</span>
+                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.30</span>
         </h1>
     </div>
 
@@ -501,15 +501,27 @@
 
                 <div id="pumpResult" class="hidden scan-result"></div>
 
-                <select id="pumpHP" class="hidden">
-                    <option value="">Select HP...</option>
-                    <option value="1">1 HP</option>
-                    <option value="2">2 HP</option>
-                    <option value="3">3 HP</option>
-                    <option value="5">5 HP</option>
-                    <option value="7.5">7.5 HP</option>
-                    <option value="10">10 HP</option>
-                </select>
+                <div id="pumpSpecs" class="hidden" style="display:flex; gap:10px; margin-top:10px;">
+                    <select id="pumpHP" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                        <option value="">Select HP...</option>
+                        <option value="1">1 HP</option>
+                        <option value="2">2 HP</option>
+                        <option value="3">3 HP</option>
+                        <option value="5">5 HP</option>
+                        <option value="7.5">7.5 HP</option>
+                        <option value="10">10 HP</option>
+                    </select>
+                    <select id="pumpHead" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                        <option value="">Select Head...</option>
+                        <option value="10">10 m</option>
+                        <option value="20">20 m</option>
+                        <option value="30">30 m</option>
+                        <option value="50">50 m</option>
+                        <option value="70">70 m</option>
+                        <option value="90">90 m</option>
+                        <option value="100">100 m</option>
+                    </select>
+                </div>
                 <input type="file" id="pumpCam" accept="image/*" capture="environment" class="hidden"
                     onchange="handlePhoto('pump', this)">
                 <input type="file" id="pumpFile" accept="image/*" class="hidden" onchange="handlePhoto('pump', this)">
@@ -772,7 +784,7 @@
             const draft = {
                 data: {
                     controller: { qr: scannedData.controller.qr }, // No photo
-                    pump: { qr: scannedData.pump.qr, hp: scannedData.pump.hp },
+                    pump: { qr: scannedData.pump.qr, hp: scannedData.pump.hp, head: scannedData.pump.head },
                     panels: { qr: scannedData.panels.qr, type: scannedData.panels.type },
                     extraPanels: scannedData.extraPanels.map(p => ({ qr: p.qr, type: p.type })),
                     issues: [] // Photos lost
@@ -790,6 +802,7 @@
             scannedData.controller.qr = draft.data.controller.qr;
             scannedData.pump.qr = draft.data.pump.qr;
             scannedData.pump.hp = draft.data.pump.hp;
+            scannedData.pump.head = draft.data.pump.head;
             scannedData.panels.qr = draft.data.panels.qr;
             scannedData.panels.type = draft.data.panels.type;
             scannedData.extraPanels = draft.data.extraPanels || [];
@@ -824,8 +837,9 @@
                 resDiv.textContent = `Serial: ${scannedData.pump.qr}`;
                 resDiv.classList.remove('hidden');
                 resDiv.classList.add('scan-result');
-                document.getElementById('pumpHP').classList.remove('hidden');
+                document.getElementById('pumpSpecs').classList.remove('hidden');
                 if (scannedData.pump.hp) document.getElementById('pumpHP').value = scannedData.pump.hp;
+                if (scannedData.pump.head) document.getElementById('pumpHead').value = scannedData.pump.head;
                 document.getElementById('pumpSection').classList.remove('hidden'); // Show Next
             }
             if (scannedData.panels.qr) {
@@ -1295,7 +1309,7 @@
 
             // Show HP/Type selector and photo button
             if (type === 'pump') {
-                document.getElementById('pumpHP').classList.remove('hidden');
+                document.getElementById('pumpSpecs').classList.remove('hidden'); // Show Container
             }
 
             const photoBtn = document.getElementById(`${type}PhotoBtn`);
@@ -1330,6 +1344,7 @@
             // Get HP/Type if needed
             if (type === 'pump') {
                 scannedData.pump.hp = document.getElementById('pumpHP').value;
+                scannedData.pump.head = document.getElementById('pumpHead').value;
             }
 
             // Show scanned confirmation
@@ -1339,6 +1354,7 @@
                 <h4>✓ ${type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
                 <p>QR: ${scannedData[type].qr}</p>
                 ${scannedData[type].hp ? `<p>HP: ${scannedData[type].hp}</p>` : ''}
+                ${scannedData[type].head ? `<p>Head: ${scannedData[type].head} m</p>` : ''}
                 ${scannedData[type].type ? `<p>Type: ${scannedData[type].type}</p>` : ''}
                 <p>✓ Photo captured</p>
             `;
@@ -1478,6 +1494,7 @@
                     <h4>Pump</h4>
                     <p>QR: ${scannedData.pump.qr}</p>
                     <p>HP: ${scannedData.pump.hp}</p>
+                    <p>Head: ${scannedData.pump.head || '-'} m</p>
                     <p>✓ Photo captured</p>
                 </div>
 
@@ -1609,6 +1626,7 @@
                     pump: {
                         qr: scannedData.pump.qr,
                         hp: scannedData.pump.hp,
+                        head: scannedData.pump.head,
                         photo: pumpPhotoUrl
                     },
                     panels: {
