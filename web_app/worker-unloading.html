@@ -352,7 +352,7 @@
     <div class="header">
         <button class="back-btn" onclick="window.location.href='home.html'">←</button>
         <h1>📦 Material Unloading <span
-                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.30</span>
+                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.31</span>
         </h1>
     </div>
 
@@ -545,6 +545,10 @@
                 <div class="section-title">
                     <span class="status-icon status-pending" id="panelsStatus">3</span>
                     <span>Solar Panels</span>
+                    <span id="panelCounter"
+                        style="margin-left:auto; font-size:14px; font-weight:bold; color:#0d47a1; background:#e3f2fd; padding:3px 8px; border-radius:12px; display:none;">
+                        0 / ?
+                    </span>
                 </div>
                 <div id="qrReaderPanels" class="hidden"></div>
                 <!-- Manual Input Panels -->
@@ -805,6 +809,9 @@
             scannedData.pump.head = draft.data.pump.head;
             scannedData.panels.qr = draft.data.panels.qr;
             scannedData.panels.type = draft.data.panels.type;
+            // Re-calc Expected Panels
+            if (scannedData.pump.hp) updatePanelCounter(scannedData.pump.hp);
+
             scannedData.extraPanels = draft.data.extraPanels || [];
 
             // Move to Step 2
@@ -1303,7 +1310,11 @@
                 scannedDiv.innerHTML = `<h4>✓ Panel Scanned</h4><p>QR: ${qrCode}</p>`;
                 scannedDiv.classList.remove('hidden');
                 scannedDiv.className = 'scanned-item';
+
                 setTimeout(() => document.getElementById('panelsActions').scrollIntoView({ behavior: 'smooth' }), 100);
+
+                // Update Counter (Current + Extras)
+                if (scannedData.pump.hp) updatePanelCounter(scannedData.pump.hp);
                 return;
             }
 
@@ -1345,6 +1356,7 @@
             if (type === 'pump') {
                 scannedData.pump.hp = document.getElementById('pumpHP').value;
                 scannedData.pump.head = document.getElementById('pumpHead').value;
+                updatePanelCounter(scannedData.pump.hp);
             }
 
             // Show scanned confirmation
@@ -1399,9 +1411,21 @@
             document.getElementById('panelsStatus').className = 'status-icon status-pending'; // Reset status icon? Optional.
 
             saveDraft(); // Auto-Save
+            if (scannedData.pump.hp) updatePanelCounter(scannedData.pump.hp);
         };
 
         window.finishPanels = () => {
+            // ... logic ...
+
+            // Validation
+            const current = (scannedData.panels.qr ? 1 : 0) + scannedData.extraPanels.length;
+            const expected = scannedData.expectedPanels || 0;
+
+            if (expected > 0 && current !== expected) {
+                const ignore = confirm(`⚠️ Warning: Expected ${expected} panels for ${scannedData.pump.hp}HP, but scanned ${current}.\n\nContinue anyway?`);
+                if (!ignore) return;
+            }
+
             if (!scannedData.panels.qr && scannedData.extraPanels.length > 0) {
                 // Move first extra to main if main is empty
                 scannedData.panels = scannedData.extraPanels.shift();
@@ -1425,6 +1449,14 @@
             let qr = data.qr;
             let hp = data.hp;
             let pType = data.type;
+
+            if (type === 'pump') {
+                // Capture values locally if skipped
+                scannedData.pump.hp = document.getElementById('pumpHP').value;
+                scannedData.pump.head = document.getElementById('pumpHead').value;
+                hp = scannedData.pump.hp;
+                updatePanelCounter(hp);
+            }
 
             scannedDiv.innerHTML = `
                 <h4>✓ ${type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
@@ -1532,6 +1564,33 @@
                 signaturePadFarmer = initPad('signature-pad-farmer');
                 signaturePadWorker = initPad('signature-pad-worker');
             }, 300);
+        };
+
+        window.updatePanelCounter = (hp) => {
+            const rules = { '3': 6, '5': 9, '7.5': 13 };
+            const expected = rules[hp] || 0;
+            scannedData.expectedPanels = expected;
+
+            const current = (scannedData.panels && scannedData.panels.qr ? 1 : 0) + scannedData.extraPanels.length;
+
+            const counterDiv = document.getElementById('panelCounter');
+            if (expected > 0) {
+                counterDiv.style.display = 'inline-block';
+                counterDiv.innerText = `${current} / ${expected} Panels`;
+
+                if (current === expected) {
+                    counterDiv.style.color = 'green';
+                    counterDiv.style.background = '#e8f5e9';
+                } else if (current > expected) {
+                    counterDiv.style.color = 'orange';
+                    counterDiv.style.background = '#fff3e0';
+                } else {
+                    counterDiv.style.color = '#0d47a1';
+                    counterDiv.style.background = '#e3f2fd';
+                }
+            } else {
+                counterDiv.style.display = 'none';
+            }
         };
 
         window.submitUnloading = async () => {
