@@ -1184,24 +1184,26 @@
                 // Skip header repetition
                 if (String(r[map.name]).toLowerCase().includes('name')) continue;
 
-                stagingData.push({
-                    BENEFICIARY_NAME: r[map.name],
-                    name: r[map.name],
-                    MOBILE_NO: map.phone > -1 ? r[map.phone] : '',
-                    phone: map.phone > -1 ? r[map.phone] : '',
-                    VILLAGE_NAME: map.village > -1 ? r[map.village] : '',
-                    location: map.village > -1 ? r[map.village] : '',
-                    TALUKA_NAME: map.taluka > -1 ? r[map.taluka] : '',
-                    BENEFICIARY_NO: map.id > -1 ? r[map.id] : '',
-                    PUMP_LOAD: map.hp > -1 ? r[map.hp] : '',
-                    hp: map.hp > -1 ? r[map.hp] : '',
+                const safeVal = (val) => (val === undefined || val === null) ? '' : String(val).trim();
 
-                    // New Fields
-                    VENDOR_CODE: map.vendor > -1 ? r[map.vendor] : '',
-                    DIVISION_NAME: map.division > -1 ? r[map.division] : '',
-                    SUBDIVISION_NAME: map.subdiv > -1 ? r[map.subdiv] : '',
-                    PIN_CODE: map.pin > -1 ? r[map.pin] : '',
-                    Head: map.head > -1 ? r[map.head] : '',
+                stagingData.push({
+                    BENEFICIARY_NAME: safeVal(r[map.name]),
+                    name: safeVal(r[map.name]),
+                    MOBILE_NO: map.phone > -1 ? safeVal(r[map.phone]) : '',
+                    phone: map.phone > -1 ? safeVal(r[map.phone]) : '',
+                    VILLAGE_NAME: map.village > -1 ? safeVal(r[map.village]) : '',
+                    location: map.village > -1 ? safeVal(r[map.village]) : '',
+                    TALUKA_NAME: map.taluka > -1 ? safeVal(r[map.taluka]) : '',
+                    BENEFICIARY_NO: map.id > -1 ? safeVal(r[map.id]) : '',
+                    PUMP_LOAD: map.hp > -1 ? safeVal(r[map.hp]) : '',
+                    hp: map.hp > -1 ? safeVal(r[map.hp]) : '',
+
+                    // New Fields (Sanitized)
+                    VENDOR_CODE: map.vendor > -1 ? safeVal(r[map.vendor]) : '',
+                    DIVISION_NAME: map.division > -1 ? safeVal(r[map.division]) : '',
+                    SUBDIVISION_NAME: map.subdiv > -1 ? safeVal(r[map.subdiv]) : '',
+                    PIN_CODE: map.pin > -1 ? safeVal(r[map.pin]) : '',
+                    Head: map.head > -1 ? safeVal(r[map.head]) : '',
 
                     unloading_status: 'pending',
                     installation_status: 'pending',
