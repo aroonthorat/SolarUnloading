@@ -956,44 +956,53 @@
 
         async function processFile(file) {
             if (!file) return;
-            document.getElementById('filePreview').innerHTML = "Parsing file... Please wait.";
+            document.getElementById('filePreview').innerHTML = "Scanning all sheets... Please wait.";
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const wb = XLSX.read(data, { type: 'array' });
-                    const sheet = wb.Sheets[wb.SheetNames[0]];
-                    globalRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-                    if (globalRows.length < 2) throw new Error("File empty");
+                    let bestSheetName = '';
+                    let bestHeaderIdx = 0;
+                    let bestScore = 0;
+                    let bestRows = [];
 
-                    // intelligent header detection (Scoring System)
-                    let headerIdx = 0;
-                    let maxScore = 0;
-                    const targets = ['beneficiary', 'name', 'mobile', 'village', 'vendor', 'division', 'pin', 'code', 'load', 'hp'];
+                    const targets = ['beneficiary', 'name', 'mobile', 'village', 'vendor', 'division', 'pin', 'code', 'load', 'hp', 'head'];
 
-                    for (let i = 0; i < Math.min(20, globalRows.length); i++) {
-                        const r = globalRows[i].map(x => String(x).toLowerCase());
-                        let score = 0;
-                        targets.forEach(t => {
-                            if (r.some(c => c.includes(t))) score++;
-                        });
+                    // Scan ALL sheets to find the one with data
+                    wb.SheetNames.forEach(sheetName => {
+                        const sheet = wb.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        if (rows.length < 2) return;
 
-                        // Heuristic: A real header row usually has multiple matches
-                        if (score > maxScore) {
-                            maxScore = score;
-                            headerIdx = i;
+                        // Check first 20 rows of this sheet
+                        for (let i = 0; i < Math.min(20, rows.length); i++) {
+                            const r = rows[i].map(x => String(x).toLowerCase());
+                            let score = 0;
+                            targets.forEach(t => {
+                                if (r.some(c => c.includes(t))) score++;
+                            });
+
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestHeaderIdx = i;
+                                bestSheetName = sheetName;
+                                bestRows = rows;
+                            }
                         }
+                    });
+
+                    if (bestScore < 2) {
+                        throw new Error("Could not find a valid data sheet. Please check column names.");
                     }
 
-                    // Fallback: If no good score, default to 0 but warn
-                    if (maxScore < 2) {
-                        console.warn("Low confidence in header detection. Defaulting to best guess.");
-                    }
+                    console.log(`Found data on sheet: ${bestSheetName} at row ${bestHeaderIdx} with score ${bestScore}`);
 
-                    globalHeaders = globalRows[headerIdx].map(String); // Keep original case
-                    renderColumnMapper(headerIdx);
+                    globalRows = bestRows;
+                    globalHeaders = globalRows[bestHeaderIdx].map(String);
+                    renderColumnMapper(bestHeaderIdx);
 
                 } catch (err) {
                     console.error(err);
