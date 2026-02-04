@@ -830,9 +830,9 @@
                 data: {
                     controller: { qr: scannedData.controller.qr }, // No photo
                     pump: { qr: scannedData.pump.qr, hp: scannedData.pump.hp, head: scannedData.pump.head },
-                    motor: { qr: scannedData.motor.qr, separate: document.getElementById('hasSeparateMotor').checked },
-                    panels: { qr: scannedData.panels.qr, type: scannedData.panels.type },
-                    extraPanels: scannedData.extraPanels.map(p => ({ qr: p.qr, type: p.type })),
+                    motor: { qr: scannedData.motor.qr, separate: document.getElementById('hasSeparateMotor')?.checked || false },
+                    panels: scannedData.panels.map(p => ({ qr: p.qr, index: p.index })), // Save panel array
+                    expectedPanels: scannedData.expectedPanels,
                     issues: [] // Photos lost
                 },
                 step: 2, // Always resume at scanning
@@ -849,12 +849,9 @@
             scannedData.pump.qr = draft.data.pump.qr;
             scannedData.pump.hp = draft.data.pump.hp;
             scannedData.pump.head = draft.data.pump.head;
-            scannedData.panels.qr = draft.data.panels.qr;
-            scannedData.panels.type = draft.data.panels.type;
-            // Re-calc Expected Panels
-            if (scannedData.pump.hp) updatePanelCounter(scannedData.pump.hp);
-
-            scannedData.extraPanels = draft.data.extraPanels || [];
+            scannedData.motor.qr = draft.data.motor?.qr || '';
+            scannedData.expectedPanels = draft.data.expectedPanels || 0;
+            scannedData.panels = draft.data.panels || [];
 
             // Move to Step 2
             document.getElementById('selectFarmerStep').classList.add('hidden');
@@ -876,10 +873,6 @@
                 resDiv.textContent = `Serial: ${scannedData.controller.qr}`;
                 resDiv.classList.remove('hidden');
                 resDiv.classList.add('scan-result');
-                // Flag photo missing?
-                if (!scannedData.controller.photo) {
-                    // Keep photo buttons visible
-                }
             }
             if (scannedData.pump.qr) {
                 const resDiv = document.getElementById('pumpResult');
@@ -887,39 +880,29 @@
                 resDiv.classList.remove('hidden');
                 resDiv.classList.add('scan-result');
                 document.getElementById('pumpSpecs').classList.remove('hidden');
-                if (scannedData.pump.hp) document.getElementById('pumpHP').value = scannedData.pump.hp;
+                if (scannedData.pump.hp) {
+                    document.getElementById('pumpHP').value = scannedData.pump.hp;
+                    // Regenerate panel grid
+                    generatePanelGrid(scannedData.pump.hp);
+                    // Restore panel values
+                    scannedData.panels.forEach((panel, i) => {
+                        if (panel.qr) {
+                            document.getElementById(`panel_${i}_input`).value = panel.qr;
+                            document.getElementById(`panel_${i}_status`).innerHTML = '✅ <span style="color:green;">Done</span>';
+                            document.getElementById(`panel_${i}`).style.borderColor = '#28a745';
+                            document.getElementById(`panel_${i}`).style.background = '#e8f5e9';
+                            document.getElementById(`panel_${i}_input`).disabled = true;
+                        }
+                    });
+                    updatePanelProgress();
+                }
                 if (scannedData.pump.head) document.getElementById('pumpHead').value = scannedData.pump.head;
                 document.getElementById('pumpSection').classList.remove('hidden'); // Show Next
             }
-            if (scannedData.panels.qr) {
-                const resDiv = document.getElementById('panelsResult');
-                resDiv.textContent = `Serial: ${scannedData.panels.qr}`;
-                resDiv.classList.remove('hidden');
 
-                // Panels are done (no photo needed now)
-                document.getElementById('panelsSection').classList.remove('hidden');
-                document.getElementById('panelsActions').classList.remove('hidden');
+            document.getElementById('panelsSection').classList.remove('hidden');
+            document.getElementById('panelsActions').classList.remove('hidden');
 
-                const scannedDiv = document.getElementById('panelsScanned');
-                scannedDiv.innerHTML = `<h4>✓ Panel Scanned</h4><p>QR: ${scannedData.panels.qr}</p><small style="color:blue">(Restored from draft)</small>`;
-                scannedDiv.classList.remove('hidden');
-                scannedDiv.className = 'scanned-item';
-
-                document.getElementById('panelsStatus').className = 'status-icon status-done';
-            }
-
-            // Render Extras
-            if (scannedData.extraPanels.length > 0) {
-                const list = document.getElementById('extraPanelsList');
-                list.innerHTML = '';
-                scannedData.extraPanels.forEach((p, idx) => {
-                    const div = document.createElement('div');
-                    div.className = 'scanned-item';
-                    div.style.background = '#eef';
-                    div.innerHTML = `<h4>Panel #${idx + 1}</h4><p>QR: ${p.qr}</p><small>(Restored)</small>`;
-                    list.appendChild(div);
-                });
-            }
 
             alert("Draft Restored! Note: You may need to retake photos for Controller/Pump if they weren't uploaded.");
         };
@@ -1653,34 +1636,7 @@
         };
 
 
-        window.addAnotherPanel = () => {
-            if (!scannedData.panels.qr) {
-                alert("Please complete the current panel scan first.");
-                return;
-            }
-            scannedData.extraPanels.push({ ...scannedData.panels });
 
-            const list = document.getElementById('extraPanelsList');
-            const div = document.createElement('div');
-            div.className = 'scanned-item';
-            div.style.background = '#eef';
-            div.innerHTML = `< h4 > Panel #${scannedData.extraPanels.length}</h4 >
-                              <p>QR: ${scannedData.panels.qr}</p>
-                              <p>Type: ${scannedData.panels.type || '-'}</p>`;
-            list.appendChild(div);
-
-            // Reset
-            scannedData.panels = { qr: '', type: '', photo: null };
-            document.getElementById('panelsResult').classList.add('hidden');
-            document.getElementById('panelsScanned').innerHTML = '';
-            document.getElementById('panelsScanned').className = 'hidden';
-            document.getElementById('panelsActions').classList.add('hidden');
-            document.getElementById('panelsPhotoBtn').classList.add('hidden');
-            document.getElementById('panelsStatus').className = 'status-icon status-pending'; // Reset status icon? Optional.
-
-            saveDraft(); // Auto-Save
-            if (scannedData.pump.hp) updatePanelCounter(scannedData.pump.hp);
-        };
 
         window.finishPanels = () => {
             // Validation
