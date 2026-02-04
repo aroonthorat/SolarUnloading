@@ -968,14 +968,28 @@
 
                     if (globalRows.length < 2) throw new Error("File empty");
 
-                    // intelligent header detection
+                    // intelligent header detection (Scoring System)
                     let headerIdx = 0;
-                    for (let i = 0; i < Math.min(15, globalRows.length); i++) {
+                    let maxScore = 0;
+                    const targets = ['beneficiary', 'name', 'mobile', 'village', 'vendor', 'division', 'pin', 'code', 'load', 'hp'];
+
+                    for (let i = 0; i < Math.min(20, globalRows.length); i++) {
                         const r = globalRows[i].map(x => String(x).toLowerCase());
-                        if (r.some(c => c.includes('beneficiary') || c.includes('name') || c.includes('farmer'))) {
+                        let score = 0;
+                        targets.forEach(t => {
+                            if (r.some(c => c.includes(t))) score++;
+                        });
+
+                        // Heuristic: A real header row usually has multiple matches
+                        if (score > maxScore) {
+                            maxScore = score;
                             headerIdx = i;
-                            break;
                         }
+                    }
+
+                    // Fallback: If no good score, default to 0 but warn
+                    if (maxScore < 2) {
+                        console.warn("Low confidence in header detection. Defaulting to best guess.");
                     }
 
                     globalHeaders = globalRows[headerIdx].map(String); // Keep original case
