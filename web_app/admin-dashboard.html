@@ -967,40 +967,56 @@
                     let bestSheetName = '';
                     let bestHeaderIdx = 0;
                     let bestScore = 0;
-                    let bestRows = [];
 
                     const targets = ['beneficiary', 'name', 'mobile', 'village', 'vendor', 'division', 'pin', 'code', 'load', 'hp', 'head'];
 
-                    // Scan ALL sheets to find the one with data
-                    wb.SheetNames.forEach(sheetName => {
-                        const sheet = wb.Sheets[sheetName];
-                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                        if (rows.length < 2) return;
+                    // 1. Light Scan: Check only top 30 rows of each sheet
+                    for (const sheetName of wb.SheetNames) {
+                        try {
+                            const sheet = wb.Sheets[sheetName];
+                            if (!sheet['!ref']) continue; // Empty sheet
 
-                        // Check first 20 rows of this sheet
-                        for (let i = 0; i < Math.min(20, rows.length); i++) {
-                            const r = rows[i].map(x => String(x).toLowerCase());
-                            let score = 0;
-                            targets.forEach(t => {
-                                if (r.some(c => c.includes(t))) score++;
+                            // Limit parsing to top 30 rows for detection
+                            const range = XLSX.utils.decode_range(sheet['!ref']);
+                            range.e.r = Math.min(range.e.r, 30); // Cap at 30 rows
+
+                            const previewRows = XLSX.utils.sheet_to_json(sheet, {
+                                header: 1,
+                                range: range
                             });
 
-                            if (score > bestScore) {
-                                bestScore = score;
-                                bestHeaderIdx = i;
-                                bestSheetName = sheetName;
-                                bestRows = rows;
-                            }
-                        }
-                    });
+                            if (previewRows.length < 2) continue;
 
-                    if (bestScore < 2) {
-                        throw new Error("Could not find a valid data sheet. Please check column names.");
+                            for (let i = 0; i < previewRows.length; i++) {
+                                const r = previewRows[i].map(x => String(x).toLowerCase());
+                                let score = 0;
+                                targets.forEach(t => {
+                                    if (r.some(c => c.includes(t))) score++;
+                                });
+
+                                if (score > bestScore) {
+                                    bestScore = score;
+                                    bestHeaderIdx = i;
+                                    bestSheetName = sheetName;
+                                }
+                            }
+
+                            // Optimization: High confidence? Stop scanning.
+                            if (bestScore >= 5) break;
+
+                        } catch (e) { console.warn("Skipping sheet", sheetName, e); }
                     }
 
-                    console.log(`Found data on sheet: ${bestSheetName} at row ${bestHeaderIdx} with score ${bestScore}`);
+                    if (bestScore < 2) {
+                        throw new Error("No valid data sheet found. Checked " + wb.SheetNames.length + " sheets.");
+                    }
 
-                    globalRows = bestRows;
+                    console.log(`Selected Sheet: ${bestSheetName} (Score: ${bestScore})`);
+                    document.getElementById('filePreview').innerHTML = `Processing ${bestSheetName}...`;
+
+                    // 2. Heavy Load: Read ONLY the winner sheet
+                    const winnerSheet = wb.Sheets[bestSheetName];
+                    globalRows = XLSX.utils.sheet_to_json(winnerSheet, { header: 1 });
                     globalHeaders = globalRows[bestHeaderIdx].map(String);
                     renderColumnMapper(bestHeaderIdx);
 
