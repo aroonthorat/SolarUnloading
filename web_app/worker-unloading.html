@@ -358,7 +358,7 @@
             <!-- Fix: Added semicolon after center -->
             <span style="display:inline-flex; align-items:center; gap:5px;">
                 <span
-                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.36</span>
+                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.37</span>
                 <button onclick="window.location.reload(true)"
                     style="background:none; border:none; cursor:pointer; font-size:14px; opacity:0.7; color:white;"
                     title="Check for Updates">🔄</button>
@@ -488,10 +488,22 @@
             </div>
 
             <!-- Pump -->
-            <div class="scan-section hidden" id="pumpSection">
+            <!-- Pump -->
+            <div class="scan-section" id="pumpSection">
                 <div class="section-title">
                     <span class="status-icon status-pending" id="pumpStatus">2</span>
-                    <span>Pump / Motor</span>
+                    <span>Pump / Motor Set</span>
+                </div>
+
+                <!-- Separate Motor Toggle -->
+                <div
+                    style="margin-bottom:15px; background:#fff3cd; padding:10px; border-radius:8px; border:1px solid #ffeeba;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="hasSeparateMotor" onchange="toggleMotorSection()"
+                            style="width:20px; height:20px;">
+                        <span style="color:#856404; font-weight:600; font-size:14px;">Motor has different Serial? (e.g.
+                            Shakti)</span>
+                    </label>
                 </div>
                 <div id="qrReaderPump" class="hidden"></div>
                 <!-- Manual Input Pump -->
@@ -548,10 +560,50 @@
                         onclick="skipPhoto('pump')">Skip Photo & Continue →</button>
                 </div>
                 <div id="pumpScanned" class="hidden"></div>
+
+                <!-- Motor (Optional) -->
+                <div id="motorSection" class="hidden"
+                    style="margin-top:20px; border-top:2px dashed #ddd; padding-top:20px;">
+                    <div class="section-title">
+                        <span class="status-icon status-pending" id="motorStatus">2B</span>
+                        <span>Motor Unit</span>
+                    </div>
+                    <div id="qrReaderMotor" class="hidden"></div>
+                    <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
+                        <span style="font-size:12px; color:#aaa;">OR</span>
+                        <input type="text" id="manualMotorInput" placeholder="Type Motor Serial No"
+                            style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
+                            onclick="handleManualEntry('motor')">✓ OK</button>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <button class="btn btn-secondary" onclick="scanQR('motor')" style="flex:1;">📷 Scan QR</button>
+                        <button class="btn btn-primary" onclick="scanWithGemini('motor')"
+                            style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                            AI Scan</button>
+                    </div>
+                    <div id="motorResult" class="hidden scan-result"></div>
+                    <div class="hidden" id="motorPhotoBtn" style="margin-top:10px;">
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-secondary" style="flex:1"
+                                onclick="document.getElementById('motorCam').click()">📸 Camera</button>
+                            <button class="btn btn-secondary" style="flex:1"
+                                onclick="document.getElementById('motorFile').click()">🖼️ Gallery</button>
+                        </div>
+                        <button class="btn btn-secondary"
+                            style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
+                            onclick="skipPhoto('motor')">Skip Photo & Continue →</button>
+                    </div>
+                    <div id="motorScanned" class="hidden"></div>
+                    <input type="file" id="motorCam" accept="image/*" capture="environment" class="hidden"
+                        onchange="handlePhoto('motor', this)">
+                    <input type="file" id="motorFile" accept="image/*" class="hidden"
+                        onchange="handlePhoto('motor', this)">
+                </div>
             </div>
 
             <!-- Panels -->
-            <div class="scan-section hidden" id="panelsSection">
+            <div class="scan-section" id="panelsSection">
                 <div class="section-title">
                     <span class="status-icon status-pending" id="panelsStatus">3</span>
                     <span>Solar Panels</span>
@@ -775,7 +827,8 @@
 
         let scannedData = {
             controller: { qr: '', photo: null },
-            pump: { qr: '', hp: '', photo: null },
+            pump: { qr: '', hp: '', head: '', photo: null },
+            motor: { qr: '', photo: null }, // Init Motor
             panels: { qr: '', type: '', photo: null },
             extraPanels: [],
             issues: []
@@ -800,6 +853,7 @@
                 data: {
                     controller: { qr: scannedData.controller.qr }, // No photo
                     pump: { qr: scannedData.pump.qr, hp: scannedData.pump.hp, head: scannedData.pump.head },
+                    motor: { qr: scannedData.motor.qr, separate: document.getElementById('hasSeparateMotor').checked },
                     panels: { qr: scannedData.panels.qr, type: scannedData.panels.type },
                     extraPanels: scannedData.extraPanels.map(p => ({ qr: p.qr, type: p.type })),
                     issues: [] // Photos lost
@@ -1372,29 +1426,25 @@
 
             // Show scanned confirmation
             const scannedDiv = document.getElementById(`${type}Scanned`);
-            scannedDiv.className = 'scanned-item';
-            scannedDiv.innerHTML = `
-                <h4>✓ ${type === 'pump' ? 'Pump / Motor' : type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
-                <p>QR: ${scannedData[type].qr}</p>
-                ${scannedData[type].hp ? `<p>HP: ${scannedData[type].hp}</p>` : ''}
-                ${scannedData[type].head ? `<p>Head: ${scannedData[type].head} m</p>` : ''}
-                ${scannedData[type].type ? `<p>Type: ${scannedData[type].type}</p>` : ''}
-                <p>✓ Photo captured</p>
-            `;
+            if (scannedDiv) {
+                scannedDiv.className = 'scanned-item';
+                scannedDiv.innerHTML = `
+                    <h4>✓ ${type === 'pump' ? 'Pump / Motor' : type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
+                    <p>QR: ${scannedData[type].qr || 'Manual Photo'}</p>
+                    ${scannedData[type].hp ? `<p>HP: ${scannedData[type].hp}</p>` : ''}
+                    ${scannedData[type].head ? `<p>Head: ${scannedData[type].head} m</p>` : ''}
+                    ${scannedData[type].type ? `<p>Type: ${scannedData[type].type}</p>` : ''}
+                    <p>✓ Photo captured</p>
+                `;
+                scannedDiv.classList.remove('hidden');
+            }
 
             document.getElementById(`${type}Status`).className = 'status-icon status-done';
 
-            // Show next section
-            if (type === 'controller') {
-                document.getElementById('pumpSection').classList.remove('hidden');
-            } else if (type === 'pump') {
-                document.getElementById('panelsSection').classList.remove('hidden');
-            } else if (type === 'panels') {
-                document.getElementById('panelsActions').classList.remove('hidden');
-                setTimeout(() => document.getElementById('panelsActions').scrollIntoView({ behavior: 'smooth' }), 100);
-            }
-            saveDraft(); // Auto-Save
+            // Auto-Save
+            saveDraft();
         };
+
 
         window.addAnotherPanel = () => {
             if (!scannedData.panels.qr) {
@@ -1407,7 +1457,7 @@
             const div = document.createElement('div');
             div.className = 'scanned-item';
             div.style.background = '#eef';
-            div.innerHTML = `<h4>Panel #${scannedData.extraPanels.length}</h4>
+            div.innerHTML = `< h4 > Panel #${scannedData.extraPanels.length}</h4 >
                               <p>QR: ${scannedData.panels.qr}</p>
                               <p>Type: ${scannedData.panels.type || '-'}</p>`;
             list.appendChild(div);
@@ -1433,7 +1483,7 @@
             const expected = scannedData.expectedPanels || 0;
 
             if (expected > 0 && current !== expected) {
-                const ignore = confirm(`⚠️ Warning: Expected ${expected} panels for ${scannedData.pump.hp}HP, but scanned ${current}.\n\nContinue anyway?`);
+                const ignore = confirm(`⚠️ Warning: Expected ${expected} panels for ${scannedData.pump.hp}HP, but scanned ${current}.\n\nContinue anyway ? `);
                 if (!ignore) return;
             }
 
@@ -1459,6 +1509,7 @@
             let data = scannedData[type];
             let qr = data.qr;
             let hp = data.hp;
+            let head = data.head; // Added Head
             let pType = data.type;
 
             if (type === 'pump') {
@@ -1466,16 +1517,18 @@
                 scannedData.pump.hp = document.getElementById('pumpHP').value;
                 scannedData.pump.head = document.getElementById('pumpHead').value;
                 hp = scannedData.pump.hp;
+                head = scannedData.pump.head;
                 updatePanelCounter(hp);
             }
 
             scannedDiv.innerHTML = `
-                <h4>✓ ${type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
+            <h4>✓ ${type.charAt(0).toUpperCase() + type.slice(1)} Scanned</h4>
                 <p>QR: ${qr}</p>
                 ${hp ? `<p>HP: ${hp}</p>` : ''}
+                ${head ? `<p>Head: ${head} m</p>` : ''}
                 ${pType ? `<p>Type: ${pType}</p>` : ''}
-                <p style="color:orange;">⚠ Photo Skipped</p>
-            `;
+        <p style="color:orange;">⚠ Photo Skipped</p>
+        `;
             document.getElementById(`${type}Status`).className = 'status-icon status-done';
 
             // Hide buttons
@@ -1506,7 +1559,7 @@
                 reader.onload = (e) => {
                     const div = document.createElement('div');
                     div.className = 'photo-item';
-                    div.innerHTML = `<img src="${e.target.result}">`;
+                    div.innerHTML = `< img src = "${e.target.result}" > `;
                     preview.appendChild(div);
                 };
                 reader.readAsDataURL(file);
@@ -1519,13 +1572,13 @@
 
             const content = document.getElementById('reviewContent');
             content.innerHTML = `
-                <div class="farmer-info">
+            < div class="farmer-info" >
                     <div class="farmer-name">${selectedFarmer.name}</div>
                     <div class="farmer-details">
                         <div>📍 ${selectedFarmer.location}</div>
                         <div>⚡ ${selectedFarmer.hp} HP</div>
                     </div>
-                </div>
+                </div >
 
                 <div class="scanned-item">
                     <h4>Controller</h4>
@@ -1553,8 +1606,9 @@
                         <h4>Issues Reported</h4>
                         <p>${scannedData.issues.length} photos attached</p>
                     </div>
-                ` : ''}
-            `;
+                ` : ''
+                }
+        `;
 
             updateProgress(3);
 
@@ -1601,6 +1655,17 @@
                 }
             } else {
                 counterDiv.style.display = 'none';
+            }
+        };
+
+        window.toggleMotorSection = () => {
+            const isChecked = document.getElementById('hasSeparateMotor').checked;
+            const section = document.getElementById('motorSection');
+            if (isChecked) {
+                section.classList.remove('hidden');
+            } else {
+                section.classList.add('hidden');
+                scannedData.motor = { qr: '', photo: null }; // Reset
             }
         };
 
@@ -1698,6 +1763,10 @@
                         hp: scannedData.pump.hp,
                         head: scannedData.pump.head,
                         photo: pumpPhotoUrl
+                    },
+                    motor: {
+                        qr: scannedData.motor.qr || '',
+                        photo: motorPhotoUrl || ''
                     },
                     panels: {
                         qr: scannedData.panels.qr,
