@@ -1,4 +1,51 @@
+# User Specific
 node_modules/
 serviceAccountKey.json
 .DS_Store
 .env
+package-lock.json
+package.json
+grant_admin.js
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+
+# Flutter/Dart/Pub
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/app/src/main/assets/
+android/.gradle
+android/captures/
+android/gradle/
+**/*.iml
+.idea/
+
+# iOS
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# VS Code
+.vscode/
