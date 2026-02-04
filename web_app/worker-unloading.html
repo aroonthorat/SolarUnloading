@@ -358,7 +358,7 @@
             <!-- Fix: Added semicolon after center -->
             <span style="display:inline-flex; align-items:center; gap:5px;">
                 <span
-                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.35</span>
+                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.36</span>
                 <button onclick="window.location.reload(true)"
                     style="background:none; border:none; cursor:pointer; font-size:14px; opacity:0.7; color:white;"
                     title="Check for Updates">🔄</button>
@@ -488,167 +488,171 @@
             </div>
 
             <!-- Pump -->
-            <div class="section-title">
-                <span class="status-icon status-pending" id="pumpStatus">2</span>
-                <span>Pump / Motor</span>
-            </div>
-            <div id="qrReaderPump" class="hidden"></div>
-            <!-- Manual Input Pump -->
-            <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
-                <span style="font-size:12px; color:#aaa;">OR</span>
-                <input type="text" id="manualPumpInput" placeholder="Type Pump Serial No"
-                    style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
-                <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
-                    onclick="handleManualEntry('pump')">✓ OK</button>
-            </div>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button class="btn btn-secondary" onclick="scanQR('pump')" style="flex:1;">📷 Scan QR</button>
-                <button class="btn btn-primary" onclick="scanWithGemini('pump')"
-                    style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
-                    AI Scan</button>
-            </div>
-
-            <div id="pumpResult" class="hidden scan-result"></div>
-
-            <div id="pumpSpecs" class="hidden" style="display:flex; gap:10px; margin-top:10px;">
-                <select id="pumpHP" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
-                    <option value="">Select HP...</option>
-                    <option value="1">1 HP</option>
-                    <option value="2">2 HP</option>
-                    <option value="3">3 HP</option>
-                    <option value="5">5 HP</option>
-                    <option value="7.5">7.5 HP</option>
-                    <option value="10">10 HP</option>
-                </select>
-                <select id="pumpHead" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
-                    <option value="">Select Head...</option>
-                    <option value="10">10 m</option>
-                    <option value="20">20 m</option>
-                    <option value="30">30 m</option>
-                    <option value="50">50 m</option>
-                    <option value="70">70 m</option>
-                    <option value="90">90 m</option>
-                    <option value="100">100 m</option>
-                </select>
-            </div>
-            <input type="file" id="pumpCam" accept="image/*" capture="environment" class="hidden"
-                onchange="handlePhoto('pump', this)">
-            <input type="file" id="pumpFile" accept="image/*" class="hidden" onchange="handlePhoto('pump', this)">
-
-            <div class="hidden" id="pumpPhotoBtn" style="margin-top:10px;">
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-secondary" style="flex:1"
-                        onclick="document.getElementById('pumpCam').click()">📸 Camera</button>
-                    <button class="btn btn-secondary" style="flex:1"
-                        onclick="document.getElementById('pumpFile').click()">🖼️ Gallery</button>
+            <div class="scan-section hidden" id="pumpSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="pumpStatus">2</span>
+                    <span>Pump / Motor</span>
                 </div>
-                <button class="btn btn-secondary"
-                    style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
-                    onclick="skipPhoto('pump')">Skip Photo & Continue →</button>
+                <div id="qrReaderPump" class="hidden"></div>
+                <!-- Manual Input Pump -->
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
+                    <span style="font-size:12px; color:#aaa;">OR</span>
+                    <input type="text" id="manualPumpInput" placeholder="Type Pump Serial No"
+                        style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
+                        onclick="handleManualEntry('pump')">✓ OK</button>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="btn btn-secondary" onclick="scanQR('pump')" style="flex:1;">📷 Scan QR</button>
+                    <button class="btn btn-primary" onclick="scanWithGemini('pump')"
+                        style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                        AI Scan</button>
+                </div>
+
+                <div id="pumpResult" class="hidden scan-result"></div>
+
+                <div id="pumpSpecs" class="hidden" style="display:flex; gap:10px; margin-top:10px;">
+                    <select id="pumpHP" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                        <option value="">Select HP...</option>
+                        <option value="1">1 HP</option>
+                        <option value="2">2 HP</option>
+                        <option value="3">3 HP</option>
+                        <option value="5">5 HP</option>
+                        <option value="7.5">7.5 HP</option>
+                        <option value="10">10 HP</option>
+                    </select>
+                    <select id="pumpHead" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                        <option value="">Select Head...</option>
+                        <option value="10">10 m</option>
+                        <option value="20">20 m</option>
+                        <option value="30">30 m</option>
+                        <option value="50">50 m</option>
+                        <option value="70">70 m</option>
+                        <option value="90">90 m</option>
+                        <option value="100">100 m</option>
+                    </select>
+                </div>
+                <input type="file" id="pumpCam" accept="image/*" capture="environment" class="hidden"
+                    onchange="handlePhoto('pump', this)">
+                <input type="file" id="pumpFile" accept="image/*" class="hidden" onchange="handlePhoto('pump', this)">
+
+                <div class="hidden" id="pumpPhotoBtn" style="margin-top:10px;">
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('pumpCam').click()">📸 Camera</button>
+                        <button class="btn btn-secondary" style="flex:1"
+                            onclick="document.getElementById('pumpFile').click()">🖼️ Gallery</button>
+                    </div>
+                    <button class="btn btn-secondary"
+                        style="width:100%; margin-top:10px; background:#fff; color:#555; border:1px solid #ddd;"
+                        onclick="skipPhoto('pump')">Skip Photo & Continue →</button>
+                </div>
+                <div id="pumpScanned" class="hidden"></div>
             </div>
-            <div id="pumpScanned" class="hidden"></div>
+
+            <!-- Panels -->
+            <div class="scan-section hidden" id="panelsSection">
+                <div class="section-title">
+                    <span class="status-icon status-pending" id="panelsStatus">3</span>
+                    <span>Solar Panels</span>
+                    <span id="panelCounter"
+                        style="margin-left:auto; font-size:14px; font-weight:bold; color:#0d47a1; background:#e3f2fd; padding:3px 8px; border-radius:12px; display:none;">
+                        0 / ?
+                    </span>
+                </div>
+                <div id="qrReaderPanels" class="hidden"></div>
+                <!-- Manual Input Panels -->
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
+                    <span style="font-size:12px; color:#aaa;">OR</span>
+                    <input type="text" id="manualPanelsInput" placeholder="Type Panel Serial No"
+                        style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
+                        onclick="handleManualEntry('panels')">✓ OK</button>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
+                    <button class="btn btn-primary" onclick="scanWithGemini('panels')"
+                        style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
+                        AI Scan</button>
+                </div>
+                <div id="panelsResult" class="hidden scan-result"></div>
+
+                <!-- Panel Photos Removed -->
+                <div id="panelsScanned" class="hidden"></div>
+
+                <!-- Multiple Panel Controls -->
+                <div id="panelsActions" class="hidden"
+                    style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                    <p style="color:green; font-weight:bold;">✓ Panel Saved!</p>
+                    <button class="btn btn-secondary" style="width:100%; margin-bottom:10px;"
+                        onclick="addAnotherPanel()">➕
+                        Scan Another Panel</button>
+                    <button class="btn btn-primary" style="width:100%;" onclick="finishPanels()">Next Step: Issues
+                        →</button>
+                </div>
+                <div id="extraPanelsList" style="margin-top:15px;"></div>
+            </div>
+
+            <!-- Issues -->
+            <div class="scan-section hidden" id="issuesSection">
+                <h3>Notes & Issues</h3>
+                <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
+                    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
+                <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
+                <input type="file" id="issueCam" accept="image/*" capture="environment" multiple class="hidden"
+                    onchange="handleIssuePhotos(this)">
+                <input type="file" id="issueFile" accept="image/*" multiple class="hidden"
+                    onchange="handleIssuePhotos(this)">
+
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="btn btn-secondary" style="flex:1"
+                        onclick="document.getElementById('issueCam').click()">📸 Camera</button>
+                    <button class="btn btn-secondary" style="flex:1"
+                        onclick="document.getElementById('issueFile').click()">🖼️ Gallery</button>
+                </div>
+                <div id="issuePhotos" class="photo-preview"></div>
+            </div>
+
+            <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
+                Review & Submit
+            </button>
         </div>
 
-        <!-- Panels -->
-        <div class="scan-section hidden" id="panelsSection">
-            <div class="section-title">
-                <span class="status-icon status-pending" id="panelsStatus">3</span>
-                <span>Solar Panels</span>
-                <span id="panelCounter"
-                    style="margin-left:auto; font-size:14px; font-weight:bold; color:#0d47a1; background:#e3f2fd; padding:3px 8px; border-radius:12px; display:none;">
-                    0 / ?
-                </span>
-            </div>
-            <div id="qrReaderPanels" class="hidden"></div>
-            <!-- Manual Input Panels -->
-            <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
-                <span style="font-size:12px; color:#aaa;">OR</span>
-                <input type="text" id="manualPanelsInput" placeholder="Type Panel Serial No"
-                    style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
-                <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
-                    onclick="handleManualEntry('panels')">✓ OK</button>
-            </div>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
-                <button class="btn btn-primary" onclick="scanWithGemini('panels')"
-                    style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
-                    AI Scan</button>
-            </div>
-            <div id="panelsResult" class="hidden scan-result"></div>
+        <!-- Step 3: Review -->
+        <div class="card hidden" id="reviewStep">
+            <h2>Review & Sign</h2>
+            <div id="reviewContent"></div>
 
-            <!-- Panel Photos Removed -->
-            <div id="panelsScanned" class="hidden"></div>
-
-            <!-- Multiple Panel Controls -->
-            <div id="panelsActions" class="hidden"
-                style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                <p style="color:green; font-weight:bold;">✓ Panel Saved!</p>
-                <button class="btn btn-secondary" style="width:100%; margin-bottom:10px;" onclick="addAnotherPanel()">➕
-                    Scan Another Panel</button>
-                <button class="btn btn-primary" style="width:100%;" onclick="finishPanels()">Next Step: Issues
-                    →</button>
+            <!-- Signatures -->
+            <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Farmer Signature:</label>
+                <canvas id="signature-pad-farmer"
+                    style="border:1px solid #ccc; background:white; width:100%; height:300px; border-radius:4px; touch-action:none;"></canvas>
+                <div style="text-align:right; margin-top:5px;">
+                    <button type="button"
+                        style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
+                        onclick="clearSignature('farmer')">❌ Clear</button>
+                </div>
             </div>
-            <div id="extraPanelsList" style="margin-top:15px;"></div>
+
+            <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Worker/Driver Signature:</label>
+                <canvas id="signature-pad-worker"
+                    style="border:1px solid #ccc; background:white; width:100%; height:300px; border-radius:4px; touch-action:none;"></canvas>
+                <div style="text-align:right; margin-top:5px;">
+                    <button type="button"
+                        style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
+                        onclick="clearSignature('worker')">❌ Clear</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()" style="margin-top:15px;">
+                ✓ Confirm & Upload
+            </button>
+            <button class="btn btn-secondary" onclick="goBack()">
+                ← Go Back to Edit
+            </button>
         </div>
-
-        <!-- Issues -->
-        <div class="scan-section hidden" id="issuesSection">
-            <h3>Notes & Issues</h3>
-            <textarea id="unloadingNotes" placeholder="Add any notes about the unloading here..."
-                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; min-height:80px; margin-bottom:10px;"></textarea>
-            <div style="font-weight:600; margin-bottom:5px;">Add Photos (Optional)</div>
-            <input type="file" id="issueCam" accept="image/*" capture="environment" multiple class="hidden"
-                onchange="handleIssuePhotos(this)">
-            <input type="file" id="issueFile" accept="image/*" multiple class="hidden"
-                onchange="handleIssuePhotos(this)">
-
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn btn-secondary" style="flex:1"
-                    onclick="document.getElementById('issueCam').click()">📸 Camera</button>
-                <button class="btn btn-secondary" style="flex:1"
-                    onclick="document.getElementById('issueFile').click()">🖼️ Gallery</button>
-            </div>
-            <div id="issuePhotos" class="photo-preview"></div>
-        </div>
-
-        <button class="btn btn-primary hidden" id="reviewBtn" onclick="showReview()">
-            Review & Submit
-        </button>
-    </div>
-
-    <!-- Step 3: Review -->
-    <div class="card hidden" id="reviewStep">
-        <h2>Review & Sign</h2>
-        <div id="reviewContent"></div>
-
-        <!-- Signatures -->
-        <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
-            <label style="font-weight:bold; display:block; margin-bottom:5px;">Farmer Signature:</label>
-            <canvas id="signature-pad-farmer"
-                style="border:1px solid #ccc; background:white; width:100%; height:300px; border-radius:4px; touch-action:none;"></canvas>
-            <div style="text-align:right; margin-top:5px;">
-                <button type="button" style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
-                    onclick="clearSignature('farmer')">❌ Clear</button>
-            </div>
-        </div>
-
-        <div style="margin-top:20px; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;">
-            <label style="font-weight:bold; display:block; margin-bottom:5px;">Worker/Driver Signature:</label>
-            <canvas id="signature-pad-worker"
-                style="border:1px solid #ccc; background:white; width:100%; height:300px; border-radius:4px; touch-action:none;"></canvas>
-            <div style="text-align:right; margin-top:5px;">
-                <button type="button" style="font-size:12px; color:red; border:none; background:none; cursor:pointer;"
-                    onclick="clearSignature('worker')">❌ Clear</button>
-            </div>
-        </div>
-
-        <button class="btn btn-primary" id="submitBtn" onclick="submitUnloading()" style="margin-top:15px;">
-            ✓ Confirm & Upload
-        </button>
-        <button class="btn btn-secondary" onclick="goBack()">
-            ← Go Back to Edit
-        </button>
-    </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
