@@ -991,11 +991,33 @@
 
         function renderColumnMapper(headerIdx) {
             // Helper to build options
-            const buildOptions = (keyword) => {
+            // Helper to build options
+            const buildOptions = (keyType) => {
                 let html = '<option value="-1">-- Select Column --</option>';
+                const matchers = {
+                    'name': ['beneficiary_name', 'farmer_name', 'name'],
+                    'mobile': ['mobile_no', 'mobile', 'phone', 'contact'],
+                    'village': ['village_name', 'village', 'location'],
+                    'taluka': ['taluka_name', 'taluka', 'block'],
+                    'beneficiary': ['beneficiary_no', 'ben_id', 'id_number'],
+                    'load': ['pump_load', 'hp', 'capacity'],
+                    'vendor': ['vendor_code', 'vendor'],
+                    'division': ['division_name', 'division'],
+                    'sub': ['subdivision_name', 'sub_division', 'sub-division'],
+                    'pin': ['pin_code', 'pincode', 'zip'],
+                    'head': ['head', 'pump_head']
+                };
+
+                const keywords = matchers[keyType] || [keyType];
+
                 globalHeaders.forEach((h, i) => {
-                    const selected = h.toLowerCase().includes(keyword.toLowerCase()) ? 'selected' : '';
-                    html += `<option value="${i}" ${selected}>${h} (Col ${i + 1})</option>`;
+                    const cleanH = h.toLowerCase().trim();
+                    // Prioritize exact or strong matches
+                    let selected = '';
+                    if (keywords.some(k => cleanH === k || cleanH.includes(k))) {
+                        selected = 'selected';
+                    }
+                    html += `<option value="${i}" ${selected}>${h}</option>`;
                 });
                 return html;
             };
@@ -1030,6 +1052,27 @@
                             <label style="font-weight:bold; display:block; margin-bottom:5px;">Pump Load (HP)</label>
                             <select id="colHp" style="width:100%; padding:8px;">${buildOptions('load')}</select>
                         </div>
+                        <!-- New Fields -->
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Vendor Code</label>
+                            <select id="colVendor" style="width:100%; padding:8px;">${buildOptions('vendor')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Division</label>
+                            <select id="colDivision" style="width:100%; padding:8px;">${buildOptions('division')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Sub-Division</label>
+                            <select id="colSubdivision" style="width:100%; padding:8px;">${buildOptions('sub')}</select>
+                        </div>
+                         <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Pin Code</label>
+                            <select id="colPin" style="width:100%; padding:8px;">${buildOptions('pin')}</select>
+                        </div>
+                        <div>
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Pump Head</label>
+                            <select id="colHead" style="width:100%; padding:8px;">${buildOptions('head')}</select>
+                        </div>
                     </div>
                     
                     <button class="btn btn-primary" onclick="generatePreview(${headerIdx})">Preview Data</button>
@@ -1051,7 +1094,12 @@
                 village: getVal('colVillage'),
                 taluka: getVal('colTaluka'),
                 id: getVal('colId'),
-                hp: getVal('colHp')
+                hp: getVal('colHp'),
+                vendor: getVal('colVendor'),
+                division: getVal('colDivision'),
+                subdiv: getVal('colSubdivision'),
+                pin: getVal('colPin'),
+                head: getVal('colHead')
             };
 
             if (map.name === -1) {
@@ -1080,6 +1128,14 @@
                     BENEFICIARY_NO: map.id > -1 ? r[map.id] : '',
                     PUMP_LOAD: map.hp > -1 ? r[map.hp] : '',
                     hp: map.hp > -1 ? r[map.hp] : '',
+
+                    // New Fields
+                    VENDOR_CODE: map.vendor > -1 ? r[map.vendor] : '',
+                    DIVISION_NAME: map.division > -1 ? r[map.division] : '',
+                    SUBDIVISION_NAME: map.subdiv > -1 ? r[map.subdiv] : '',
+                    PIN_CODE: map.pin > -1 ? r[map.pin] : '',
+                    Head: map.head > -1 ? r[map.head] : '',
+
                     unloading_status: 'pending',
                     installation_status: 'pending',
                     createdAt: new Date(),
