@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Unloading - Scan Materials</title>
     <style>
@@ -351,8 +354,15 @@
 <body>
     <div class="header">
         <button class="back-btn" onclick="window.location.href='home.html'">←</button>
-        <h1>📦 Material Unloading <span
-                style="font-size:12px; font-weight:normal; opacity:0.8; margin-left:10px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.32</span>
+        <h1>📦 Material Unloading
+            <!-- Fix: Added semicolon after center -->
+            <span style="display:inline-flex; align-items:center; gap:5px;">
+                <span
+                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.34</span>
+                <button onclick="window.location.reload(true)"
+                    style="background:none; border:none; cursor:pointer; font-size:14px; opacity:0.7; color:white;"
+                    title="Check for Updates">🔄</button>
+            </span>
         </h1>
     </div>
 
