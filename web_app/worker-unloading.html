@@ -632,7 +632,8 @@
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL, uploadString, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-        import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, uploadString, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        // import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -726,11 +727,9 @@
         }
 
         // Initialize Vertex AI
-        let vertexAI, geminiModel;
-        try {
-            vertexAI = getVertexAI(app);
-            geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
-        } catch (e) { console.warn("Gemini init failed:", e); }
+        // Initialize Vertex AI (Lazy Loaded)
+        let vertexAI;
+        // geminiModel will be initialized on demand
 
         let currentUser = null;
         let selectedFarmer = null;
@@ -1061,6 +1060,17 @@
                 btn.disabled = true;
 
                 try {
+                    // Lazy Load Gemini
+                    if (!window.geminiModel) {
+                        try {
+                            const { getVertexAI, getGenerativeModel } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js");
+                            const vertexAI = getVertexAI(app);
+                            window.geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
+                        } catch (importErr) {
+                            throw new Error("Failed to load AI Module. Please use Manual Type.");
+                        }
+                    }
+
                     // Convert to Base64
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
@@ -1070,7 +1080,7 @@
                         // Call Gemini
                         const prompt = "Read the serial number, barcode, or QR code text from this image. Return ONLY the alphanumeric code string. Do not include 'Serial:', 'SN:', or any other text. If there are multiple, pick the most prominent serial number.";
 
-                        const result = await geminiModel.generateContent([
+                        const result = await window.geminiModel.generateContent([
                             prompt,
                             { inlineData: { data: base64, mimeType: file.type } }
                         ]);
