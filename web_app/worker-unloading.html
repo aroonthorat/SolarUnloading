@@ -358,7 +358,7 @@
             <!-- Fix: Added semicolon after center -->
             <span style="display:inline-flex; align-items:center; gap:5px;">
                 <span
-                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.37</span>
+                    style="font-size:12px; font-weight:normal; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">v3.38</span>
                 <button onclick="window.location.reload(true)"
                     style="background:none; border:none; cursor:pointer; font-size:14px; opacity:0.7; color:white;"
                     title="Check for Updates">🔄</button>
@@ -524,7 +524,8 @@
                 <div id="pumpResult" class="hidden scan-result"></div>
 
                 <div id="pumpSpecs" class="hidden" style="display:flex; gap:10px; margin-top:10px;">
-                    <select id="pumpHP" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                    <select id="pumpHP" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;"
+                        onchange="generatePanelGrid(this.value)">
                         <option value="">Select HP...</option>
                         <option value="1">1 HP</option>
                         <option value="2">2 HP</option>
@@ -612,37 +613,13 @@
                         0 / ?
                     </span>
                 </div>
-                <div id="qrReaderPanels" class="hidden"></div>
-                <!-- Manual Input Panels -->
-                <div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
-                    <span style="font-size:12px; color:#aaa;">OR</span>
-                    <input type="text" id="manualPanelsInput" placeholder="Type Panel Serial No"
-                        style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
-                    <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;"
-                        onclick="handleManualEntry('panels')">✓ OK</button>
-                </div>
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <button class="btn btn-secondary" onclick="scanQR('panels')" style="flex:1;">📷 Scan QR</button>
-                    <button class="btn btn-primary" onclick="scanWithGemini('panels')"
-                        style="flex:1; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none; font-weight:bold;">✨
-                        AI Scan</button>
-                </div>
-                <div id="panelsResult" class="hidden scan-result"></div>
 
-                <!-- Panel Photos Removed -->
-                <div id="panelsScanned" class="hidden"></div>
+                <!-- Panels Grid Container (Generated Dynamically) -->
+                <div id="panelsGridContainer"></div>
 
-                <!-- Multiple Panel Controls -->
-                <div id="panelsActions" class="hidden"
-                    style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                    <p style="color:green; font-weight:bold;">✓ Panel Saved!</p>
-                    <button class="btn btn-secondary" style="width:100%; margin-bottom:10px;"
-                        onclick="addAnotherPanel()">➕
-                        Scan Another Panel</button>
-                    <button class="btn btn-primary" style="width:100%;" onclick="finishPanels()">Next Step: Issues
-                        →</button>
-                </div>
-                <div id="extraPanelsList" style="margin-top:15px;"></div>
+                <!-- Finish Button -->
+                <button class="btn btn-primary" style="width:100%; margin-top:20px; display:none;" id="finishPanelsBtn"
+                    onclick="finishPanels()">Next Step: Issues →</button>
             </div>
 
             <!-- Issues -->
@@ -829,8 +806,8 @@
             controller: { qr: '', photo: null },
             pump: { qr: '', hp: '', head: '', photo: null },
             motor: { qr: '', photo: null }, // Init Motor
-            panels: { qr: '', type: '', photo: null },
-            extraPanels: [],
+            panels: [], // Array of { qr: '', index: 0 }
+            expectedPanels: 0,
             issues: []
         };
         let html5QrCode = null;
@@ -1445,6 +1422,236 @@
             saveDraft();
         };
 
+        // PANEL GRID MANAGEMENT
+
+        // Generate panel grid based on HP
+        window.generatePanelGrid = (hp) => {
+            const rules = { '3': 6, '5': 9, '7.5': 13, '10': 16 };
+            const expectedCount = rules[hp] || 0;
+
+            if (!expectedCount) {
+                document.getElementById('panelsGridContainer').innerHTML = '<p style="color:#999;">Please select Pump HP first.</p>';
+                return;
+            }
+
+            scannedData.expectedPanels = expectedCount;
+            scannedData.panels = Array(expectedCount).fill(null).map((_, i) => ({ qr: '', index: i }));
+
+            const container = document.getElementById('panelsGridContainer');
+            container.innerHTML = '';
+
+            for (let i = 0; i < expectedCount; i++) {
+                const panelBox = document.createElement('div');
+                panelBox.className = 'panel-box';
+                panelBox.id = `panel_${i}`;
+                panelBox.style.cssText = 'background:#f9f9f9; border:2px dashed #ddd; border-radius:8px; padding:15px; margin-bottom:10px;';
+
+                panelBox.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <strong style="color:#333;">Panel ${i + 1}</strong>
+                        <span id="panel_${i}_status" style="font-size:12px; color:#999;">⏳ Pending</span>
+                    </div>
+                    <input type="text" id="panel_${i}_input" placeholder="Type or Scan Serial No" 
+                        style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; margin-bottom:8px;"
+                        onchange="handlePanelInput(${i})">
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary" onclick="scanPanelQR(${i})" style="flex:1; padding:8px; font-size:13px;">📷 Scan</button>
+                        <button class="btn btn-primary" onclick="scanPanelAI(${i})" 
+                            style="flex:1; padding:8px; font-size:13px; background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color:#005c97; border:none;">✨ AI</button>
+                    </div>
+                `;
+
+                container.appendChild(panelBox);
+            }
+
+            // Show finish button
+            document.getElementById('finishPanelsBtn').style.display = 'block';
+            document.getElementById('panelCounter').style.display = 'block';
+            updatePanelProgress();
+        };
+
+        // Handle manual input for a panel
+        window.handlePanelInput = (index) => {
+            const input = document.getElementById(`panel_${index}_input`);
+            const serial = input.value.trim();
+
+            if (!serial) return;
+
+            // Check for duplicates
+            const isDuplicate = scannedData.panels.some((p, i) => i !== index && p.qr === serial);
+
+            if (isDuplicate) {
+                alert(`⚠️ Duplicate Serial!\nThis serial number is already used in another panel.`);
+                input.value = '';
+                input.style.borderColor = 'red';
+                setTimeout(() => input.style.borderColor = '#ddd', 2000);
+                return;
+            }
+
+            // Save panel data
+            scannedData.panels[index].qr = serial;
+
+            // Update UI
+            document.getElementById(`panel_${index}_status`).innerHTML = '✅ <span style="color:green;">Done</span>';
+            document.getElementById(`panel_${index}`).style.borderColor = '#28a745';
+            document.getElementById(`panel_${index}`).style.background = '#e8f5e9';
+            input.disabled = true;
+
+            updatePanelProgress();
+            saveDraft();
+        };
+
+        // Scan panel with QR scanner
+        window.scanPanelQR = async (index) => {
+            // Trigger QR scanner for this specific panel
+            currentScanning = { type: 'panel', index: index };
+
+            const readerDiv = document.createElement('div');
+            readerDiv.id = 'tempPanelReader';
+            readerDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; padding:20px;';
+            readerDiv.innerHTML = `
+                <div style="text-align:center; color:white; margin-bottom:10px;">
+                    <h3>Scanning Panel ${index + 1}</h3>
+                    <button onclick="closePanelScanner()" style="background:red; color:white; padding:10px 20px; border:none; border-radius:8px; margin-top:10px;">Cancel</button>
+                </div>
+                <div id="panelQrReader"></div>
+            `;
+            document.body.appendChild(readerDiv);
+
+            try {
+                const html5QrCode = new Html5Qrcode("panelQrReader");
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 15, useBarCodeDetectorIfSupported: true },
+                    (decodedText) => {
+                        html5QrCode.stop();
+                        document.getElementById('tempPanelReader').remove();
+
+                        // Check for duplicates
+                        const isDuplicate = scannedData.panels.some((p, i) => i !== index && p.qr === decodedText);
+
+                        if (isDuplicate) {
+                            alert(`⚠️ Duplicate Serial!\nThis serial number is already used in another panel.`);
+                            return;
+                        }
+
+                        // Save panel data
+                        scannedData.panels[index].qr = decodedText;
+                        document.getElementById(`panel_${index}_input`).value = decodedText;
+                        document.getElementById(`panel_${index}_status`).innerHTML = '✅ <span style="color:green;">Done</span>';
+                        document.getElementById(`panel_${index}`).style.borderColor = '#28a745';
+                        document.getElementById(`panel_${index}`).style.background = '#e8f5e9';
+                        document.getElementById(`panel_${index}_input`).disabled = true;
+
+                        updatePanelProgress();
+                        saveDraft();
+                    }
+                );
+            } catch (err) {
+                console.error('Scanner error:', err);
+                document.getElementById('tempPanelReader').remove();
+                alert('Scanner error. Please try manual entry.');
+            }
+        };
+
+        window.closePanelScanner = () => {
+            document.getElementById('tempPanelReader')?.remove();
+        };
+
+        // Scan panel with AI
+        window.scanPanelAI = async (index) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    // Convert to base64
+                    const reader = new FileReader();
+                    reader.onload = async () => {
+                        const base64 = reader.result.split(',')[1];
+
+                        // Call Gemini AI
+                        alert('Calling Gemini AI...');
+
+                        const response = await fetch(`https://us-central1-aiplatform.googleapis.com/v1/projects/gen-lang-client-0579320558/locations/us-central1/publishers/google/models/gemini-1.5-flash:streamGenerateContent?key=AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [
+                                        { text: "Extract the serial number from this solar panel. Return ONLY the serial number, nothing else." },
+                                        { inline_data: { mime_type: file.type, data: base64 } }
+                                    ]
+                                }]
+                            })
+                        });
+
+                        if (!response.ok) throw new Error('AI request failed');
+
+                        const data = await response.json();
+                        const serial = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+                        if (!serial) {
+                            alert('Could not extract serial number. Please try again.');
+                            return;
+                        }
+
+                        // Check for duplicates
+                        const isDuplicate = scannedData.panels.some((p, i) => i !== index && p.qr === serial);
+
+                        if (isDuplicate) {
+                            alert(`⚠️ Duplicate Serial!\nThis serial number is already used in another panel.`);
+                            return;
+                        }
+
+                        // Save panel data
+                        scannedData.panels[index].qr = serial;
+                        document.getElementById(`panel_${index}_input`).value = serial;
+                        document.getElementById(`panel_${index}_status`).innerHTML = '✅ <span style="color:green;">Done</span>';
+                        document.getElementById(`panel_${index}`).style.borderColor = '#28a745';
+                        document.getElementById(`panel_${index}`).style.background = '#e8f5e9';
+                        document.getElementById(`panel_${index}_input`).disabled = true;
+
+                        updatePanelProgress();
+                        saveDraft();
+                    };
+
+                    reader.readAsDataURL(file);
+                } catch (err) {
+                    console.error('AI Scan error:', err);
+                    alert('AI scan failed. Please try again.');
+                }
+            };
+
+            input.click();
+        };
+
+        // Update panel progress counter
+        window.updatePanelProgress = () => {
+            const filled = scannedData.panels.filter(p => p.qr).length;
+            const expected = scannedData.expectedPanels;
+
+            const counter = document.getElementById('panelCounter');
+            counter.textContent = `${filled} / ${expected}`;
+
+            if (filled === 0) {
+                counter.style.color = '#999';
+                counter.style.background = '#f5f5f5';
+            } else if (filled < expected) {
+                counter.style.color = '#0d47a1';
+                counter.style.background = '#e3f2fd';
+            } else if (filled === expected) {
+                counter.style.color = '#2e7d32';
+                counter.style.background = '#c8e6c9';
+                document.getElementById('panelsStatus').className = 'status-icon status-done';
+            }
+        };
+
 
         window.addAnotherPanel = () => {
             if (!scannedData.panels.qr) {
@@ -1476,24 +1683,19 @@
         };
 
         window.finishPanels = () => {
-            // ... logic ...
-
             // Validation
-            const current = (scannedData.panels.qr ? 1 : 0) + scannedData.extraPanels.length;
+            const filled = scannedData.panels.filter(p => p.qr).length;
             const expected = scannedData.expectedPanels || 0;
 
-            if (expected > 0 && current !== expected) {
-                const ignore = confirm(`⚠️ Warning: Expected ${expected} panels for ${scannedData.pump.hp}HP, but scanned ${current}.\n\nContinue anyway ? `);
-                if (!ignore) return;
+            if (expected === 0) {
+                alert("Please select Pump HP first to determine panel count.");
+                return;
             }
 
-            if (!scannedData.panels.qr && scannedData.extraPanels.length > 0) {
-                // Move first extra to main if main is empty
-                scannedData.panels = scannedData.extraPanels.shift();
-                // Also need to clear it from list display? visual only, doesn't matter much.
-            } else if (!scannedData.panels.qr) {
-                alert("Please scan at least one panel.");
-                return;
+            if (filled < expected) {
+                const missing = expected - filled;
+                const proceed = confirm(`⚠️ Warning: ${missing} panel(s) still missing!\n\nExpected: ${expected}\nFilled: ${filled}\n\nContinue anyway?`);
+                if (!proceed) return;
             }
 
             document.getElementById('issuesSection').classList.remove('hidden');
