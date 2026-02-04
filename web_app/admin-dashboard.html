@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Upload Farmer List</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -337,7 +336,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.35</span>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.36</span>
                     </h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
@@ -702,7 +701,7 @@
                      <div style="display:flex; align-items:center; gap:10px;">
                         <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status.toUpperCase()}</span>
                         <div>
-                            <button class="action-btn" onclick="window.generateFarmerPDF('${f.id}')" style="background:#fff3e0; color:#ef6c00; border:1px solid #ffe0b2; margin-right:5px;" title="Download Report">📄 PDF</button>
+                            <button class="action-btn" onclick="window.viewFarmer('${f.id}')" style="background:#e3f2fd; color:#1976d2; border:1px solid #bbdefb; margin-right:5px;" title="View Full Details">👁️ View</button>
                             <button class="action-btn btn-edit" onclick="window.editFarmer('${f.id}')">✏️</button>
                             <button class="action-btn btn-delete" onclick="window.deleteFarmer('${f.id}')">🗑️</button>
                         </div>
@@ -1265,237 +1264,15 @@
         };
 
         // --- PDF GENERATION ---
-        window.generateFarmerPDF = async (farmerId) => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            // Toast
-            const toast = document.createElement('div');
-            toast.innerText = "Generating PDF (Downloading Images)...";
-            toast.style.cssText = "position:fixed;top:20px;right:20px;padding:15px;background:#333;color:white;z-index:9999;border-radius:5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);";
-            document.body.appendChild(toast);
-
-            // Helper: Convert Image URL to Base64 (with Proxy for CORS)
-            const getBase64FromUrl = async (url) => {
-                try {
-                    // Use a public CORS proxy to bypass Firebase restrictions
-                    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-                    const res = await fetch(proxyUrl);
-                    if (!res.ok) throw new Error('Network error');
-                    const blob = await res.blob();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                    });
-                } catch (e) {
-                    console.warn("Proxy Fetch Error for image:", url, e);
-                    return null; // Fallback to link
-                }
-            };
-
-            try {
-                // Fetch Data
-                const farmer = window.allFarmersData.find(f => f.id === farmerId);
-                const unloadQ = query(collection(db, 'unloading_records'), where('farmer_id', '==', farmerId));
-                const installQ = query(collection(db, 'installation_records'), where('farmer_id', '==', farmerId));
-
-                const [unloadSnap, installSnap] = await Promise.all([getDocs(unloadQ), getDocs(installQ)]);
-                const unloadData = unloadSnap.empty ? null : unloadSnap.docs[0].data();
-                const installData = installSnap.empty ? null : installSnap.docs[0].data();
-
-                // Header
-                doc.setFontSize(22);
-                doc.setTextColor(40, 40, 40);
-                doc.text("Farmer Status Report", 14, 20);
-
-                // Farmer Details Box
-                doc.setFillColor(245, 245, 245);
-                doc.rect(14, 25, 180, 35, 'F');
-                doc.setFontSize(12);
-                doc.setTextColor(0, 0, 0);
-
-                doc.text(`Name:`, 18, 32); doc.setFont("helvetica", "bold"); doc.text(farmer.name, 45, 32); doc.setFont("helvetica", "normal");
-                doc.text(`Beneficiary:`, 18, 38); doc.text(farmer.beneficiaryNo || farmer.id, 45, 38);
-                doc.text(`Village:`, 18, 44); doc.text(farmer.location || '-', 45, 44);
-                doc.text(`Mobile:`, 18, 50); doc.text(farmer.phone || '-', 45, 50);
-                doc.text(`Pump:`, 120, 32); doc.text(`${farmer.hp || farmer.PUMP_LOAD || '-'} HP`, 140, 32);
-
-                let y = 70;
-
-                // UNLOADING TABLE
-                doc.setFontSize(14);
-                doc.setTextColor(0, 100, 0); // Green
-                doc.text("Unloading Status", 14, y);
-                y += 5;
-
-                const uRows = [];
-                if (unloadData) {
-                    uRows.push(["Status", "Successfully Unloaded ✅"]);
-                    uRows.push(["Completed On", unloadData.timestamp ? new Date(unloadData.timestamp.seconds * 1000).toLocaleString() : "-"]);
-                    uRows.push(["Worker", `${unloadData.unloaded_by_name || '-'} (${unloadData.worker_email || '-'})`]);
-                    uRows.push(["Material QRs", `Controller: ${unloadData.controller?.qr || '-'}\nPanel: ${unloadData.panels?.qr || '-'}\nPump: ${unloadData.pump?.qr || '-'}`]);
-                } else {
-                    uRows.push(["Status", "Pending ⚠️"]);
-                }
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Field', 'Details']],
-                    body: uRows,
-                    theme: 'grid',
-                    headStyles: { fillColor: [40, 167, 69] },
-                    styles: { fontSize: 10, cellPadding: 3 }
-                });
-
-                y = doc.lastAutoTable.finalY + 15;
-
-                // INSTALLATION TABLE
-                doc.setFontSize(14);
-                doc.setTextColor(0, 86, 179); // Blue
-                doc.text("Installation Status", 14, y);
-                y += 5;
-
-                const iRows = [];
-                if (installData) {
-                    iRows.push(["Status", "Installation Complete ✅"]);
-                    iRows.push(["Completed On", installData.timestamp ? new Date(installData.timestamp.seconds * 1000).toLocaleString() : "-"]);
-                    iRows.push(["Worker", `${installData.installed_by_name || '-'} (${installData.worker_email || '-'})`]);
-                } else {
-                    iRows.push(["Status", "Pending ⚠️"]);
-                }
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Field', 'Details']],
-                    body: iRows,
-                    theme: 'grid',
-                    headStyles: { fillColor: [0, 123, 255] },
-                    styles: { fontSize: 10, cellPadding: 3 }
-                });
-
-                y = doc.lastAutoTable.finalY + 15;
-
-                // SIGNATURE SECTION
-                // SIGNATURE SECTION
-                const sigFarmer = unloadData?.signature_farmer || unloadData?.signature;
-                const sigWorker = unloadData?.signature_worker;
-
-                if (sigFarmer || sigWorker) {
-                    if (y + 40 > doc.internal.pageSize.height) { doc.addPage(); y = 20; }
-
-                    // Farmer Signature
-                    if (sigFarmer) {
-                        doc.setFontSize(10); doc.setTextColor(0, 0, 0);
-                        doc.text("Farmer Signature:", 14, y);
-                        try {
-                            const b64 = await getBase64FromUrl(sigFarmer);
-                            if (b64) doc.addImage(b64, "PNG", 14, y + 2, 60, 30);
-                        } catch (e) { }
-                    }
-
-                    // Worker Signature
-                    if (sigWorker) {
-                        doc.setFontSize(10); doc.setTextColor(0, 0, 0);
-                        doc.text("Worker Signature:", 100, y);
-                        try {
-                            const b64 = await getBase64FromUrl(sigWorker);
-                            if (b64) doc.addImage(b64, "PNG", 100, y + 2, 60, 30);
-                        } catch (e) { }
-                    }
-
-                    y += 35;
-                }
-
-                // PHOTOS SECTION
-                y = doc.lastAutoTable.finalY + 15;
-                const pageHeight = doc.internal.pageSize.height;
-
-                if (y > pageHeight - 60) { doc.addPage(); y = 20; }
-
-                doc.setFontSize(12);
-                doc.setTextColor(0, 0, 0);
-                doc.text("Photo Evidence:", 14, y);
-                y += 10;
-
-                // Collect Photos
-                const photoList = [];
-                if (unloadData) {
-                    if (unloadData.controller?.photo) photoList.push({ label: "Controller", url: unloadData.controller.photo });
-                    if (unloadData.pump?.photo) photoList.push({ label: "Pump", url: unloadData.pump.photo });
-                    if (unloadData.panels?.photo) photoList.push({ label: "Panels (Main)", url: unloadData.panels.photo });
-
-                    if (unloadData.extra_panels && Array.isArray(unloadData.extra_panels)) {
-                        unloadData.extra_panels.forEach((p, i) => {
-                            if (p.photo) photoList.push({ label: `Panel #${i + 2}`, url: p.photo });
-                        });
-                    }
-
-                    if (unloadData.issues?.photos && Array.isArray(unloadData.issues.photos)) {
-                        unloadData.issues.photos.forEach((url, i) => {
-                            photoList.push({ label: `Issue/Note #${i + 1}`, url: url });
-                        });
-                    }
-                }
-                if (installData) {
-                    const photos = installData.photos || installData.photoUrls || installData.images || [];
-                    if (Array.isArray(photos)) {
-                        photos.forEach((url, i) => photoList.push({ label: `Install ${i + 1}`, url }));
-                    }
-                }
-
-                if (photoList.length === 0) {
-                    doc.setTextColor(100, 100, 100);
-                    doc.text("(No photos uploaded)", 14, y);
-                } else {
-                    // Render Grid (2 cols)
-                    let x = 14;
-                    const imgW = 80;
-                    const imgH = 60;
-
-                    for (let i = 0; i < photoList.length; i++) {
-                        // Check Page Break
-                        if (y + imgH + 10 > pageHeight) {
-                            doc.addPage();
-                            y = 20;
-                            x = 14;
-                        }
-
-                        const p = photoList[i];
-                        toast.innerText = `Adding Photo ${i + 1}/${photoList.length}...`;
-
-                        try {
-                            const base64 = await getBase64FromUrl(p.url);
-                            if (base64) {
-                                doc.addImage(base64, "JPEG", x, y, imgW, imgH);
-                                doc.setFontSize(9);
-                                doc.text(p.label, x, y + imgH + 5);
-                            } else {
-                                // Fallback Link
-                                doc.textWithLink(`🔗 ${p.label} (Click to open)`, x, y + 10, { url: p.url });
-                                doc.rect(x, y, imgW, imgH); // Placeholder box
-                            }
-                        } catch (err) {
-                            console.log(err);
-                            doc.text(`(Image Error)`, x, y + 10);
-                        }
-
-                        // Grid logic
-                        if (x === 14) { x += imgW + 10; }
-                        else { x = 14; y += imgH + 15; }
-                    }
-                }
-
-                doc.save(`${farmer.name.replace(/\s+/g, '_')}_VisualReport.pdf`);
-
-            } catch (e) {
-                console.error(e);
-                alert("Error: " + e.message);
-            } finally {
-                document.body.removeChild(toast);
-            }
+        // --- VIEW FARMER DETAILS ---
+        window.viewFarmer = (id) => {
+            const f = window.allFarmersData.find(x => x.id === id);
+            if (!f) return;
+            sessionStorage.setItem('viewingFarmer', JSON.stringify(f));
+            window.location.href = 'farmer-profile.html';
         };
+
+
 
     </script>
 </body>

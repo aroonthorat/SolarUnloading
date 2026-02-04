@@ -548,15 +548,19 @@
                         <div class="info-box">
                             <div class="info-row">
                                 <strong>Controller QR:</strong>
-                                <span>${data.controller_qr}</span>
+                                <span>${data.controller?.qr || data.controller_qr || '-'}</span>
                             </div>
                             <div class="info-row">
                                 <strong>Pump QR:</strong>
-                                <span>${data.pump_qr} (${data.pump_hp} HP)</span>
+                                <span>${data.pump?.qr || data.pump_qr || '-'} (${data.pump?.hp || data.pump_hp} HP)</span>
                             </div>
                             <div class="info-row">
-                                <strong>Panels QR:</strong>
-                                <span>${data.panels_qr} (${data.panels_type})</span>
+                                <strong>Panel Type:</strong>
+                                <span>${data.panel_type || data.panels_type || '-'}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Panels Count:</strong>
+                                <span>${data.panels_count || '-'} / ${data.expected_panels || '-'}</span>
                             </div>
                             <div class="info-row">
                                 <strong>Worker:</strong>
@@ -566,16 +570,18 @@
                                 <strong>Date:</strong>
                                 <span>${data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'N/A'}</span>
                             </div>
+                             <div class="info-row">
+                                <strong>Notes:</strong>
+                                <span>${data.issues?.notes || '-'}</span>
+                            </div>
                         </div>
 
                         <h4 style="margin: 20px 0 10px 0;">Photos:</h4>
                         <div class="photo-grid">
-                            ${createPhotoItem(data.controller_photo, 'Controller')}
-                            ${createPhotoItem(data.pump_photo, 'Pump')}
-                            ${createPhotoItem(data.panels_photo, 'Panels')}
-                            ${data.issue_photos && data.issue_photos.length > 0 ?
-                            data.issue_photos.map(url => createPhotoItem(url, 'Issue')).join('') :
-                            ''}
+                            ${createPhotoItem(data.controller?.photo || data.controller_photo, 'Controller')}
+                            ${createPhotoItem(data.pump?.photo || data.pump_photo, 'Pump')}
+                            ${createPhotoItem(data.panels?.photo || data.panels_photo, 'Panels')} 
+                            ${(data.issues?.photos || data.issue_photos || []).map(url => createPhotoItem(url, 'Issue')).join('')}
                         </div>
                     `;
                 });
