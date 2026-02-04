@@ -629,13 +629,23 @@
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script>
+        window.onerror = function (msg, url, line) {
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = "position:fixed; top:0; left:0; width:100%; background:red; color:white; padding:10px; z-index:9999; font-size:12px; font-family:monospace;";
+            errDiv.innerText = "CRITICAL ERROR: " + msg + " (Line " + line + ")";
+            document.body.prepend(errDiv);
+            alert("App Error: " + msg);
+        };
+        console.log("Global Error Handler Initialized");
+    </script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL, uploadString, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL, uploadString, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-        // import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
+
+        console.log("Firebase Modules Imported Successfully");
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -728,10 +738,8 @@
             });
         }
 
-        // Initialize Vertex AI
-        // Initialize Vertex AI (Lazy Loaded)
-        let vertexAI;
-        // geminiModel will be initialized on demand
+        // Initialize Vertex AI (Lazy Loaded on Demand)
+        // let vertexAI; (Removed unused top-level var)
 
         let currentUser = null;
         let selectedFarmer = null;
