@@ -336,7 +336,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <div>
                     <h2 style="color:#333;">Admin Dashboard <span
-                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.36</span>
+                            style="background:#667eea; color:white; font-size:12px; padding:3px 8px; border-radius:10px; vertical-align:middle;">v3.37</span>
                     </h2>
                     <p style="color:#777;">Manage farmers, track unloads, and monitor installations.</p>
                 </div>
@@ -970,55 +970,83 @@
 
                     const targets = ['beneficiary', 'name', 'mobile', 'village', 'vendor', 'division', 'pin', 'code', 'load', 'hp', 'head'];
 
+                    let debugLog = '<div style="margin-bottom:10px; font-size:12px; color:#555;"><strong>Scanning Sheets:</strong><ul style="margin:5px 0; padding-left:20px;">';
+
                     // 1. Light Scan: Check only top 30 rows of each sheet
                     for (const sheetName of wb.SheetNames) {
                         try {
                             const sheet = wb.Sheets[sheetName];
-                            if (!sheet['!ref']) continue; // Empty sheet
+                            // If !ref is missing, try to parse anyway or assume it's small
 
                             // Limit parsing to top 30 rows for detection
-                            const range = XLSX.utils.decode_range(sheet['!ref']);
-                            range.e.r = Math.min(range.e.r, 30); // Cap at 30 rows
+                            let previewRows = [];
+                            if (sheet['!ref']) {
+                                const range = XLSX.utils.decode_range(sheet['!ref']);
+                                range.e.r = Math.min(range.e.r, 30);
+                                previewRows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: range });
+                            } else {
+                                // Fallback for small/weird sheets
+                                previewRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                                if (previewRows.length > 30) previewRows = previewRows.slice(0, 30);
+                            }
 
-                            const previewRows = XLSX.utils.sheet_to_json(sheet, {
-                                header: 1,
-                                range: range
-                            });
+                            if (previewRows.length < 1) {
+                                debugLog += `<li>${sheetName}: Empty</li>`;
+                                continue;
+                            }
 
-                            if (previewRows.length < 2) continue;
+                            let sheetMaxScore = 0;
+                            let sheetBestRow = 0;
 
                             for (let i = 0; i < previewRows.length; i++) {
-                                const r = previewRows[i].map(x => String(x).toLowerCase());
+                                const r = (previewRows[i] || []).map(x => String(x).toLowerCase());
                                 let score = 0;
                                 targets.forEach(t => {
                                     if (r.some(c => c.includes(t))) score++;
                                 });
 
-                                if (score > bestScore) {
-                                    bestScore = score;
-                                    bestHeaderIdx = i;
-                                    bestSheetName = sheetName;
+                                if (score > sheetMaxScore) {
+                                    sheetMaxScore = score;
+                                    sheetBestRow = i;
                                 }
                             }
 
-                            // Optimization: High confidence? Stop scanning.
-                            if (bestScore >= 5) break;
+                            debugLog += `<li>${sheetName}: Best Score <strong>${sheetMaxScore}</strong> (Row ${sheetBestRow})</li>`;
 
-                        } catch (e) { console.warn("Skipping sheet", sheetName, e); }
+                            if (sheetMaxScore > bestScore) {
+                                bestScore = sheetMaxScore;
+                                bestHeaderIdx = sheetBestRow;
+                                bestSheetName = sheetName;
+                            }
+
+                            // REMOVED EARLY BREAK TO ENSURE FULL SCAN
+
+                        } catch (e) {
+                            console.warn("Skipping sheet", sheetName, e);
+                            debugLog += `<li>${sheetName}: Error (${e.message})</li>`;
+                        }
                     }
+                    debugLog += '</ul></div>';
 
                     if (bestScore < 2) {
-                        throw new Error("No valid data sheet found. Checked " + wb.SheetNames.length + " sheets.");
+                        document.getElementById('filePreview').innerHTML = debugLog + `<div class="error">No valid data sheet found. Check column names.</div>`;
+                        return;
                     }
 
                     console.log(`Selected Sheet: ${bestSheetName} (Score: ${bestScore})`);
-                    document.getElementById('filePreview').innerHTML = `Processing ${bestSheetName}...`;
+                    // Display the log explicitly so user can see what happened
+                    // Then load the data
 
                     // 2. Heavy Load: Read ONLY the winner sheet
                     const winnerSheet = wb.Sheets[bestSheetName];
                     globalRows = XLSX.utils.sheet_to_json(winnerSheet, { header: 1 });
                     globalHeaders = globalRows[bestHeaderIdx].map(String);
+
+                    // Temporarily show debug info above mapper
                     renderColumnMapper(bestHeaderIdx);
+                    // Prepend debug info
+                    const existingMapper = document.getElementById('filePreview').innerHTML;
+                    document.getElementById('filePreview').innerHTML = debugLog + `<div style="color:green; font-weight:bold;">Selected: ${bestSheetName}</div>` + existingMapper;
 
                 } catch (err) {
                     console.error(err);
