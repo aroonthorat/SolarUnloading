@@ -4,8 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Installation - Record Work</title>
+    <title>Installation Documentation</title>
+    <script src="https://unpkg.com/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -17,11 +21,10 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
             min-height: 100vh;
-            padding-bottom: 30px;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             padding: 15px 20px;
             display: flex;
@@ -43,7 +46,81 @@
         .container {
             max-width: 800px;
             margin: 20px auto;
-            padding: 0 20px;
+            padding: 0 20px 80px;
+        }
+
+        .progress-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            transition: width 0.3s;
+            z-index: 1;
+            width: 0%;
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid #e0e0e0;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            border-color: #28a745;
+            background: #28a745;
+            color: white;
+        }
+
+        .step.completed .step-circle {
+            border-color: #28a745;
+            background: #28a745;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #666;
         }
 
         .card {
@@ -76,44 +153,101 @@
             color: #666;
         }
 
-        .section {
+        .photo-section {
             margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
         }
 
-        h3 {
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
             color: #333;
             margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .note {
-            background: #fff3cd;
-            color: #856404;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .btn {
-            width: 100%;
+        .photo-item {
+            background: white;
             padding: 15px;
-            border: none;
             border-radius: 10px;
-            font-size: 16px;
+            margin-bottom: 15px;
+            border: 2px dashed #ddd;
+            transition: all 0.3s;
+        }
+
+        .photo-item.captured {
+            border: 2px solid #28a745;
+            background: #e8f5e9;
+        }
+
+        .photo-label {
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .required-badge {
+            background: #dc3545;
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .optional-badge {
+            background: #6c757d;
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .photo-preview {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: block;
+        }
+
+        .photo-buttons {
+            display: flex;
+            gap: 10px;
             margin-top: 10px;
         }
 
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
         }
 
         .btn:disabled {
@@ -121,176 +255,41 @@
             cursor: not-allowed;
         }
 
-        .photo-preview {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
+        .hidden {
+            display: none !important;
         }
 
-        .photo-item {
+        .search-box {
             position: relative;
-            padding-top: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #e0e0e0;
-        }
-
-        .photo-item img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .remove-photo {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            z-index: 1;
-        }
-
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            min-height: 100px;
-            font-family: inherit;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 10px;
             margin-bottom: 20px;
-            display: none;
         }
 
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .photo-count {
-            color: #28a745;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        .search-input {
             width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
         }
 
-        .modal.active {
-            display: flex;
+        .search-input:focus {
+            outline: none;
+            border-color: #28a745;
         }
 
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
+        .farmer-list {
+            max-height: 400px;
             overflow-y: auto;
-            border-radius: 15px;
-            padding: 20px;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .detail-row {
-            border-bottom: 1px solid #eee;
-            padding: 10px 0;
-        }
-
-        .detail-label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        .detail-photos {
-            display: flex;
-            gap: 5px;
-            overflow-x: auto;
-            margin-top: 5px;
-        }
-
-        .thumb {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 5px;
             border: 1px solid #ddd;
-        }
-
-        /* Search Styles */
-        .farmer-search-container {
-            position: relative;
-        }
-
-        #farmerSearch {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
             border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-
-        #farmerSearchResults {
-            height: 60vh;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            display: block;
-            /* Always visible */
-            background: #fff;
+            background: white;
         }
 
         .farmer-list-item {
             padding: 15px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
         .farmer-list-item:hover {
@@ -298,14 +297,137 @@
         }
 
         .farmer-item-name {
-            font-weight: bold;
+            font-weight: 600;
             color: #333;
+            margin-bottom: 5px;
         }
 
         .farmer-item-meta {
             font-size: 13px;
-            color: #777;
-            margin-top: 3px;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-partial {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .status-complete {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .progress-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            font-weight: 600;
+            z-index: 1000;
+        }
+
+        .signature-pad {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: crosshair;
+            background: white;
+            display: block;
+            width: 100%;
+        }
+
+        .serial-reference {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #0d47a1;
+        }
+
+        .issue-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .review-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .review-photo {
+            position: relative;
+        }
+
+        .review-photo img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #28a745;
+        }
+
+        .review-photo-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 10px 80px;
+            }
+
+            .photo-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -313,96 +435,297 @@
 <body>
     <div class="header">
         <button class="back-btn" onclick="window.location.href='home.html'">←</button>
-        <h1>⚙️ Installation Log</h1>
+        <div>
+            <h1 style="font-size: 20px;">📸 Installation Documentation</h1>
+            <p style="font-size: 12px; opacity: 0.9;">Document installation with photos</p>
+        </div>
     </div>
 
     <div class="container">
-        <div id="success" class="success"></div>
-        <div id="error" class="error"></div>
-
-        <!-- Farmer Selection -->
-        <div class="card" id="selectStep">
-            <h2>Select Farmer</h2>
-            <div class="farmer-search-container">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span style="font-size:12px; color:#666;">👇 Click to select</span>
-                    <span id="dbStatus" style="font-size:12px; color:#666; cursor:pointer;" onclick="loadFarmers()">↻
-                        Check DB</span>
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-steps">
+                <div class="progress-line" id="progressLine"></div>
+                <div class="step active">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Select Farmer</div>
                 </div>
-                <div style="display:flex; gap:8px; margin-bottom:10px;">
-                    <input type="text" id="farmerSearch" placeholder="🔍 Name, Village, Status..."
-                        onkeyup="filterFarmers(event)" style="margin-bottom:0;">
-                    <button id="aiSearchBtn" onclick="aiSearch()"
-                        style="white-space:nowrap; border:none; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);">✨
-                        AI Search</button>
+                <div class="step">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Capture Photos</div>
                 </div>
-                <div id="farmerSearchResults">
-                    <div style="padding:20px; text-align:center; color:#999;">Loading...</div>
+                <div class="step">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Review & Submit</div>
                 </div>
             </div>
-            <div id="farmerInfo"></div>
         </div>
 
-        <!-- Installation Form -->
-        <div class="card" id="installationForm" style="display: none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="margin:0;">Installation Details</h2>
-                <button class="btn btn-secondary" style="width:auto; padding:8px 15px; margin:0;"
-                    onclick="cancelInstallation()">← Change Farmer</button>
+        <!-- Step 1: Select Farmer -->
+        <div id="selectFarmerStep">
+            <div class="card">
+                <h2 style="margin-bottom: 15px;">🔍 Select Farmer for Installation</h2>
+                <p style="color: #666; margin-bottom: 20px;">Only farmers with completed unloading are shown</p>
+
+                <div class="search-box">
+                    <input type="text" id="farmerSearch" class="search-input"
+                        placeholder="Search by name, phone, location..." onkeyup="filterFarmers(event)">
+                </div>
+
+                <div id="farmerSearchResults" class="farmer-list"></div>
+            </div>
+        </div>
+
+        <!-- Step 2: Capture Photos -->
+        <div id="capturePhotosStep" class="hidden">
+            <div class="card">
+                <div id="farmerInfoHeader"></div>
             </div>
 
-            <!-- Installation Photos -->
-            <div class="section">
-                <h3>Installation Photos *</h3>
-                <p class="note">✓ Required: Take photos of installed controller, pump, and panels</p>
-                <input type="file" id="installationPhotos" multiple accept="image/*" capture="environment"
-                    style="display: none;" onchange="handleInstallationPhotos()">
-                <button class="btn btn-secondary" onclick="document.getElementById('installationPhotos').click()">
-                    📷 Take Installation Photos
+            <!-- System & Farmer Photos -->
+            <div class="photo-section">
+                <div class="section-title">
+                    <span>🌞 System & Farmer Photos</span>
+                    <span id="systemCounter" style="font-size: 14px; color: #28a745;">0/3</span>
+                </div>
+
+                <div class="photo-item" id="photo_farmer_with_system">
+                    <div class="photo-label">
+                        <span>1. Farmer with Complete System</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('farmer_with_system')">📷 Capture
+                            Photo</button>
+                    </div>
+                    <div id="preview_farmer_with_system"></div>
+                </div>
+
+                <div class="photo-item" id="photo_farmer_with_water_flow">
+                    <div class="photo-label">
+                        <span>2. Farmer with Water Flow (Pump Running)</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('farmer_with_water_flow')">📷 Capture
+                            Photo</button>
+                    </div>
+                    <div id="preview_farmer_with_water_flow"></div>
+                </div>
+
+                <div class="photo-item" id="photo_farmer_with_pump">
+                    <div class="photo-label">
+                        <span>3. Farmer with Solar Pump/Motor</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('farmer_with_pump')">📷 Capture
+                            Photo</button>
+                    </div>
+                    <div id="preview_farmer_with_pump"></div>
+                </div>
+            </div>
+
+            <!-- Foundation & Earthing -->
+            <div class="photo-section">
+                <div class="section-title">
+                    <span>🏗️ Foundation & Earthing</span>
+                    <span id="foundationCounter" style="font-size: 14px; color: #28a745;">0/2</span>
+                </div>
+
+                <div class="photo-item" id="photo_foundation">
+                    <div class="photo-label">
+                        <span>4. Foundation Photo</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('foundation')">📷 Capture Photo</button>
+                    </div>
+                    <div id="preview_foundation"></div>
+                </div>
+
+                <div class="photo-item" id="photo_earthing_foundation">
+                    <div class="photo-label">
+                        <span>5. Earthing Foundation</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('earthing_foundation')">📷 Capture
+                            Photo</button>
+                    </div>
+                    <div id="preview_earthing_foundation"></div>
+                </div>
+            </div>
+
+            <!-- Serial Numbers -->
+            <div class="photo-section">
+                <div class="section-title">
+                    <span>🔢 Serial Number Documentation</span>
+                    <span id="serialCounter" style="font-size: 14px; color: #28a745;">0/3</span>
+                </div>
+
+                <div class="photo-item" id="photo_controller_serial">
+                    <div class="photo-label">
+                        <span>6. Controller Serial Number</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div id="controller_serial_ref" class="serial-reference hidden"></div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('controller_serial')">📷 Capture
+                            Photo</button>
+                    </div>
+                    <div id="preview_controller_serial"></div>
+                </div>
+
+                <div class="photo-item" id="photo_pump_serial">
+                    <div class="photo-label">
+                        <span>7. Pump Serial Number</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div id="pump_serial_ref" class="serial-reference hidden"></div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('pump_serial')">📷 Capture Photo</button>
+                    </div>
+                    <div id="preview_pump_serial"></div>
+                </div>
+
+                <div class="photo-item" id="photo_motor_serial">
+                    <div class="photo-label">
+                        <span>8. Motor Serial Number</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div id="motor_serial_ref" class="serial-reference hidden"></div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('motor_serial')">📷 Capture Photo</button>
+                    </div>
+                    <div id="preview_motor_serial"></div>
+                </div>
+            </div>
+
+            <!-- Farmer Documentation -->
+            <div class="photo-section">
+                <div class="section-title">
+                    <span>📄 Farmer Documentation</span>
+                    <span id="docCounter" style="font-size: 14px; color: #28a745;">0/1</span>
+                </div>
+
+                <div class="photo-item" id="photo_farmer_aadhar">
+                    <div class="photo-label">
+                        <span>9. Farmer Aadhar Card</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('farmer_aadhar')">📷 Capture
+                            Photo</button>
+                    </div>
+                    <div id="preview_farmer_aadhar"></div>
+                </div>
+            </div>
+
+            <!-- Extra Photos (Optional) -->
+            <div class="photo-section">
+                <div class="section-title">
+                    <span>➕ Additional Photos (Optional)</span>
+                </div>
+
+                <div class="photo-item" id="photo_extra_1">
+                    <div class="photo-label">
+                        <span>Extra Photo 1</span>
+                        <span class="optional-badge">OPTIONAL</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-secondary" onclick="capturePhoto('extra_1')">📷 Capture Photo</button>
+                    </div>
+                    <div id="preview_extra_1"></div>
+                </div>
+
+                <div class="photo-item" id="photo_extra_2">
+                    <div class="photo-label">
+                        <span>Extra Photo 2</span>
+                        <span class="optional-badge">OPTIONAL</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-secondary" onclick="capturePhoto('extra_2')">📷 Capture Photo</button>
+                    </div>
+                    <div id="preview_extra_2"></div>
+                </div>
+            </div>
+
+            <!-- Issues Section -->
+            <div class="issue-section">
+                <div class="section-title" style="margin-bottom: 15px;">⚠️ Issues & Notes (Optional)</div>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="hasMaterialIssue" onchange="toggleMaterialIssue()">
+                    <span>Installation pending due to material shortage</span>
+                </label>
+
+                <textarea id="issueNotes" class="textarea"
+                    placeholder="Describe any issues or notes about the installation..."></textarea>
+
+                <div style="margin-top: 15px;">
+                    <input type="file" id="issuePhotoInput" accept="image/*" capture="environment"
+                        style="display: none;" onchange="handleIssuePhoto(this)">
+                    <button class="btn btn-secondary" onclick="document.getElementById('issuePhotoInput').click()">
+                        📷 Add Issue Photo
+                    </button>
+                    <div id="issuePhotoPreview" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- Continue Button -->
+            <div style="margin-top: 30px;">
+                <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px;"
+                    onclick="goToReview()">
+                    Continue to Review →
                 </button>
-                <div class="photo-count" id="installationCount"></div>
-                <div id="installationPreview" class="photo-preview"></div>
             </div>
+        </div>
 
-            <!-- Issue Photos -->
-            <div class="section">
-                <h3>Issues (if any)</h3>
-                <p class="note">📝 Optional: Report any problems found during installation</p>
-                <textarea id="issueDescription" placeholder="Describe any issues found (optional)..."></textarea>
-                <input type="file" id="issuePhotos" multiple accept="image/*" capture="environment"
-                    style="display: none;" onchange="handleIssuePhotos()">
-                <button class="btn btn-secondary" onclick="document.getElementById('issuePhotos').click()">
-                    📷 Add Issue Photos (Optional)
-                </button>
-                <div class="photo-count" id="issueCount"></div>
-                <div id="issuePreview" class="photo-preview"></div>
+        <!-- Step 3: Review & Submit -->
+        <div id="reviewStep" class="hidden">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">📋 Review Installation</h2>
+
+                <div id="reviewFarmerInfo"></div>
+
+                <h3 style="margin: 20px 0 10px 0;">Captured Photos</h3>
+                <div id="reviewPhotos" class="review-grid"></div>
+
+                <h3 style="margin: 20px 0 10px 0;">Installation Status</h3>
+                <select id="installationStatus" class="search-input" style="font-size: 14px;">
+                    <option value="complete">✅ Complete - All photos captured, no issues</option>
+                    <option value="partial">⚠️ Partial - Some work remaining</option>
+                    <option value="pending_material">🔧 Pending Material - Waiting for supplies</option>
+                </select>
+
+                <h3 style="margin: 20px 0 10px 0;">Worker Signature</h3>
+                <canvas id="signature-pad-worker" class="signature-pad" width="400" height="150"></canvas>
+                <button class="btn btn-secondary" style="margin-top: 10px; width: auto;"
+                    onclick="clearSignature('worker')">Clear Signature</button>
+
+                <div style="margin-top: 30px; display: flex; gap: 15px;">
+                    <button class="btn btn-secondary" style="flex: 1;" onclick="goBackToPhotos()">← Back to
+                        Photos</button>
+                    <button class="btn btn-primary" style="flex: 2;" id="submitBtn" onclick="submitInstallation()">
+                        Submit Installation ✓
+                    </button>
+                </div>
             </div>
-
-            <!-- Submit -->
-            <button class="btn btn-primary" id="submitBtn" onclick="submitInstallation()">
-                ✓ Submit Installation Log
-            </button>
         </div>
     </div>
 
-    <!-- Unloading Details Modal -->
-    <div id="detailsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>📦 Unloading Details</h3>
-                <button onclick="closeModal()" style="background:none; border:none; font-size:24px;">×</button>
-            </div>
-            <div id="modalBody">Loading...</div>
-            <button class="btn btn-secondary" onclick="closeModal()" style="margin-top:15px;">Close</button>
-        </div>
+    <!-- Progress Counter -->
+    <div id="progressCounter" class="progress-counter hidden">
+        <span id="photoCount">0/9</span> Photos
     </div>
 
+    <!-- Firebase & JavaScript -->
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-        import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-vertexai-preview.js";
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, uploadBytesResumable, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
@@ -418,18 +741,25 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        // Initialize Vertex AI
-        let vertexAI, geminiModel;
-        try {
-            vertexAI = getVertexAI(app);
-            geminiModel = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
-        } catch (e) { console.warn("Gemini init failed:", e); }
-
         let currentUser = null;
         let selectedFarmer = null;
-        let installationPhotos = [];
-        let issuePhotos = [];
         let allFarmers = [];
+        let capturedPhotos = {
+            farmer_with_system: null,
+            farmer_with_water_flow: null,
+            farmer_with_pump: null,
+            foundation: null,
+            earthing_foundation: null,
+            controller_serial: null,
+            pump_serial: null,
+            motor_serial: null,
+            farmer_aadhar: null,
+            extra_1: null,
+            extra_2: null,
+            issue_photo: null
+        };
+        let serialNumbers = {};
+        let signaturePadWorker = null;
 
         // Check auth
         onAuthStateChanged(auth, (user) => {
@@ -441,118 +771,99 @@
             }
         });
 
+        // Load farmers with completed unloading
         async function loadFarmers() {
             const listContainer = document.getElementById('farmerSearchResults');
-            listContainer.style.display = 'block';
+            listContainer.innerHTML = '<div style="padding:20px; text-align:center;">Loading farmers...</div>';
 
             try {
-                // Fetch with timeout
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Network Timeout (15s)")), 15000));
-                const snapshot = await Promise.race([
-                    getDocs(collection(db, 'farmers_master')),
-                    timeoutPromise
-                ]);
+                const q = query(collection(db, 'farmers_master'), where('unloading_status', '==', 'done'));
+                const snapshot = await getDocs(q);
 
                 allFarmers = [];
-                let readyCount = 0;
-
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
-                    // Super-Robust Name Normalization
-                    let name = data.name || data.Name || data.NAME ||
-                        data.full_name || data.FULL_NAME || data['Full Name'] ||
-                        data.beneficiary_name || data.BENEFICIARY_NAME || data['Beneficiary Name'] ||
-                        data['Farmer Name'] ||
-                        '';
-
-                    const nameUpper = String(name).toUpperCase();
-                    if (nameUpper.includes('ZONE') || nameUpper.includes('DIVISION') || nameUpper.includes('CIRCLE')) {
-                        name = data.BENEFICIARY_NAME || data.FULL_NAME || 'Unknown';
-                    }
-                    if (!name || name.length < 2) name = 'Unknown Farmer (' + doc.id.substr(0, 4) + ')';
-
-                    const location = data.location || data.Location || data.VILLAGE_NAME || data.VILLAGE || '';
-                    const phone = data.phone || data.Phone || data.MOBILE_NO || '';
-                    const hp = data.hp || data.HP || data.PUMP_LOAD || '';
-
-                    // Show everyone, but mark as ready/not ready
-                    const isReady = (unloadStatus === 'done');
+                    let name = data.name || data.BENEFICIARY_NAME || data.full_name || 'Unknown';
+                    const location = data.location || data.VILLAGE_NAME || '-';
+                    const phone = data.phone || data.MOBILE_NO || '-';
+                    const hp = data.hp || data.PUMP_LOAD || '-';
+                    const installStatus = data.installation_status || 'pending';
 
                     allFarmers.push({
                         id: doc.id,
-                        name: name.trim(), location, phone, hp,
-                        installStatus,
-                        unloadStatus,
-                        isReady,
+                        name: name.trim(),
+                        location,
+                        phone,
+                        hp,
+                        installation_status: installStatus,
                         ...data
                     });
-
-                    if (isReady) readyCount++;
                 });
 
-                console.log(`Loaded ${allFarmers.length} total farmers (${readyCount} ready).`);
-                renderFarmerList(allFarmers.slice(0, 100));
+                console.log(`Loaded ${allFarmers.length} farmers with completed unloading`);
+                renderFarmerList(allFarmers);
 
                 if (allFarmers.length === 0) {
-                    listContainer.innerHTML = '<div style="padding:20px; text-align:center;">No farmers found in database.</div>';
+                    listContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">No farmers with completed unloading found.</div>';
                 }
 
             } catch (error) {
                 console.error('Error loading farmers:', error);
-                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error loading database: ' + error.message + '</div>';
+                listContainer.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Error: ' + error.message + '</div>';
             }
         }
 
         window.renderFarmerList = (list) => {
             const container = document.getElementById('farmerSearchResults');
             container.innerHTML = '';
-            container.style.display = 'block';
-
-            // Summary Header
-            const header = document.createElement('div');
-            header.style.cssText = "padding:8px 15px; background:#f8f9fa; border-bottom:1px solid #eee; font-size:12px; color:#555; font-weight:bold; position:sticky; top:0; z-index:5;";
-            header.innerText = `📋 Showing ${list.length} matches (out of ${allFarmers.length})`;
-            container.appendChild(header);
 
             if (list.length === 0) {
-                container.innerHTML += '<div style="padding:15px; text-align:center;">No matches found</div>';
+                container.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">No matching farmers</div>';
                 return;
             }
 
             list.forEach(farmer => {
-                const isDone = farmer.installStatus === 'done';
-                const isReady = farmer.isReady; // From LoadFarmers
-
+                const installStatus = farmer.installation_status || 'pending';
                 const div = document.createElement('div');
                 div.className = 'farmer-list-item';
-                if (isDone) div.style.backgroundColor = '#f8f9fa';
-                if (!isReady && !isDone) div.style.backgroundColor = '#fff8e1'; // Warning Yellow
+
+                let statusBadge = '';
+                if (installStatus === 'complete') {
+                    statusBadge = '<span class="status-badge status-complete">✅ Complete</span>';
+                } else if (installStatus === 'partial') {
+                    statusBadge = '<span class="status-badge status-partial">⚠️ Partial</span>';
+                } else {
+                    statusBadge = '<span class="status-badge status-pending">📸 Pending</span>';
+                }
 
                 div.innerHTML = `
-                     <div class="farmer-item-name" style="${isDone ? 'color:#666' : ''}">
-                        ${farmer.name} ${isDone ? '✅' : ''} ${!isReady && !isDone ? '⚠️' : ''}
-                        <div style="font-size:11px; float:right; color:#999; margin-top:3px;">#${farmer.BENEFICIARY_NO || farmer.id.substr(0, 6)}</div>
-                     </div>
-                     <div class="farmer-item-meta">
-                         📍 ${farmer.location || '-'} &nbsp;•&nbsp; 📞 ${farmer.phone || '-'}
-                         ${!isReady && !isDone ? '<div style="color:#f57c00; font-size:11px; font-weight:bold; margin-top:2px;">⚠️ Pending Unloading</div>' : ''}
-                     </div>
-                 `;
-                div.addEventListener('click', () => {
-                    selectFarmer(farmer);
-                });
+                    <div class="farmer-item-name">
+                        ${farmer.name}
+                        ${statusBadge}
+                    </div>
+                    <div class="farmer-item-meta">
+                        📍 ${farmer.location} • ⚡ ${farmer.hp} HP • 📞 ${farmer.phone}
+                    </div>
+                `;
+
+                div.addEventListener('click', () => selectFarmer(farmer));
                 container.appendChild(div);
             });
         };
 
         window.filterFarmers = (e) => {
-            const term = document.getElementById('farmerSearch').value.toLowerCase();
+            const term = document.getElementById('farmerSearch').value.toLowerCase().trim();
+
+            if (!term) {
+                renderFarmerList(allFarmers);
+                return;
+            }
+
             const filtered = allFarmers.filter(f =>
                 (f.name || '').toLowerCase().includes(term) ||
                 (f.phone || '').includes(term) ||
                 (f.location || '').toLowerCase().includes(term) ||
-                (f.id || '').toLowerCase().includes(term) ||
                 (f.BENEFICIARY_NO || '').toLowerCase().includes(term)
             );
 
@@ -561,288 +872,464 @@
                 document.getElementById('farmerSearch').blur();
                 return;
             }
-            renderFarmerList(filtered.slice(0, 20));
+
+            renderFarmerList(filtered);
         };
 
-        window.aiSearch = async () => {
-            const term = document.getElementById('farmerSearch').value;
-            if (!term) { alert("Please type something to search!"); return; }
-
-            const btn = document.getElementById('aiSearchBtn');
-            const originalText = btn.innerText;
-            btn.innerText = '🤔 Thinking...';
-            btn.disabled = true;
-            btn.style.opacity = '0.7';
-
-            try {
-                const context = allFarmers.map(f => ({
-                    id: f.id,
-                    n: f.name,
-                    l: f.location,
-                    p: f.phone,
-                    hp: f.hp,
-                    s: f.installStatus,
-                    u: f.unloading_status
-                }));
-
-                const prompt = `
-                 I have a dataset of farmers: ${JSON.stringify(context)}.
-                 User Query: "${term}".
-                 Task: Return JSON Array of matching IDs.
-                 - Handle fuzzy matching.
-                 - Handle semantic (e.g. "installed", "pending").
-                 - Return ONLY JSON array (e.g. ["id1"]).
-                 `;
-
-                const result = await geminiModel.generateContent(prompt);
-                const response = result.response;
-                let text = response.text();
-
-                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                const ids = JSON.parse(text);
-
-                if (Array.isArray(ids) && ids.length > 0) {
-                    const matches = allFarmers.filter(f => ids.includes(f.id));
-                    renderFarmerList(matches);
-                    const container = document.getElementById('farmerSearchResults');
-                    container.insertAdjacentHTML('afterbegin', `<div style="padding:5px; background:#e3f2fd; color:#0d47a1; font-size:12px; text-align:center;">✨ AI found ${matches.length} matches</div>`);
-                } else {
-                    alert("AI couldn't find any specific matches.");
-                }
-
-            } catch (error) {
-                console.error("AI Search Error:", error);
-                alert("AI Search failed.");
-                filterFarmers();
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            }
-        };
-
-        window.selectFarmer = (farmer) => {
+        window.selectFarmer = async (farmer) => {
             selectedFarmer = farmer;
-            document.getElementById('farmerSearch').value = farmer.name;
-            document.getElementById('farmerSearchResults').style.display = 'none';
 
-            const infoDiv = document.getElementById('farmerInfo');
-            infoDiv.innerHTML = `
-                <div class="farmer-info" style="margin-top: 15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div class="farmer-name">${selectedFarmer.name}</div>
-                        <button style="border:none; background:none; color:blue; cursor:pointer;" onclick="location.reload()">Change</button>
-                    </div>
-                    <div class="farmer-details">
-                        <div>📍 ${selectedFarmer.location}</div>
-                        <div>☎️ ${selectedFarmer.phone}</div>
-                        <div>⚡ ${selectedFarmer.hp} HP</div>
-                    </div>
-                </div>
-                <button class="btn" style="background:#e3f2fd; color:#0d47a1; margin-bottom:15px;" onclick="viewUnloadingDetails('${selectedFarmer.id}')">
-                    ℹ️ View Unloading Photos & Info
-                </button>
-                <button class="btn btn-primary" onclick="startInstallation()" ${!selectedFarmer.isReady ? 'disabled style="opacity:0.6; cursor:not-allowed;"' : ''}>
-                    ${!selectedFarmer.isReady ? 'Finish Unloading First' : (selectedFarmer.installStatus === 'done' ? '⚠️ Re-Log Custom' : 'Start Installation')}
-                </button>
-            `;
-        };
-
-        window.startInstallation = () => {
-            document.getElementById('selectStep').style.display = 'none';
-            document.getElementById('installationForm').style.display = 'block';
-            window.scrollTo(0, 0);
-        };
-
-        window.cancelInstallation = () => {
-            document.getElementById('installationForm').style.display = 'none';
-            document.getElementById('selectStep').style.display = 'block';
-            window.scrollTo(0, 0);
-        };
-
-        window.closeModal = () => document.getElementById('detailsModal').classList.remove('active');
-
-        window.viewUnloadingDetails = async (farmerId) => {
-            document.getElementById('detailsModal').classList.add('active');
-            const body = document.getElementById('modalBody');
-            body.innerHTML = 'Loading records...';
-
+            // Load unloading record to get serial numbers
             try {
-                const q = query(collection(db, 'unloading_records'), where('farmer_id', '==', farmerId));
-                const snap = await getDocs(q);
+                const q = query(collection(db, 'unloading_records'), where('farmer_id', '==', farmer.id));
+                const snapshot = await getDocs(q);
 
-                if (snap.empty) {
-                    body.innerHTML = '<p>No unloading record found (Manual override?).</p>';
+                if (!snapshot.empty) {
+                    const unloadingData = snapshot.docs[0].data();
+                    serialNumbers = {
+                        controller: unloadingData.controller?.qr || '',
+                        pump: unloadingData.pump?.qr || '',
+                        motor: unloadingData.motor?.qr || ''
+                    };
+
+                    // Show references
+                    if (serialNumbers.controller) {
+                        document.getElementById('controller_serial_ref').textContent = `From Unloading: ${serialNumbers.controller}`;
+                        document.getElementById('controller_serial_ref').classList.remove('hidden');
+                    }
+                    if (serialNumbers.pump) {
+                        document.getElementById('pump_serial_ref').textContent = `From Unloading: ${serialNumbers.pump}`;
+                        document.getElementById('pump_serial_ref').classList.remove('hidden');
+                    }
+                    if (serialNumbers.motor) {
+                        document.getElementById('motor_serial_ref').textContent = `From Unloading: ${serialNumbers.motor}`;
+                        document.getElementById('motor_serial_ref').classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading unloading record:', error);
+            }
+
+            // Show farmer info
+            document.getElementById('farmerInfoHeader').innerHTML = `
+                <div class="farmer-name">${farmer.name}</div>
+                <div class="farmer-details">
+                    <div>📍 ${farmer.location}</div>
+                    <div>⚡ ${farmer.hp} HP</div>
+                    <div>👤 ${farmer.BENEFICIARY_NO || farmer.id.substr(0, 6)}</div>
+                </div>
+            `;
+
+            // Move to step 2
+            document.getElementById('selectFarmerStep').classList.add('hidden');
+            document.getElementById('capturePhotosStep').classList.remove('hidden');
+            document.getElementById('progressCounter').classList.remove('hidden');
+            updateProgress(2);
+        };
+
+        // Photo capture
+        window.capturePhoto = (photoType) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Photo too large! Maximum 10MB allowed.');
                     return;
                 }
-                const data = snap.docs[0].data();
 
-                const showPhotos = (urls) => {
-                    const list = Array.isArray(urls) ? urls : (urls ? [urls] : []);
-                    if (!list.length) return '<small>No photos</small>';
-                    return list.map(u => `<img src="${u}" class="thumb" onclick="window.open('${u}')">`).join('');
+                capturedPhotos[photoType] = file;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const preview = document.getElementById(`preview_${photoType}`);
+                    preview.innerHTML = `
+                        <img src="${event.target.result}" class="photo-preview">
+                        <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" 
+                                onclick="retakePhoto('${photoType}')">🔄 Retake Photo</button>
+                    `;
+
+                    document.getElementById(`photo_${photoType}`).classList.add('captured');
                 };
+                reader.readAsDataURL(file);
 
-                let html = `
-                    <div class="detail-row">
-                        <div class="detail-label">Unloaded On</div>
-                        <div>${data.timestamp ? new Date(data.timestamp.seconds * 1000).toDateString() : '-'}</div>
-                    </div>
-                     <div class="detail-row">
-                        <div class="detail-label">Notes</div>
-                        <div>${data.issues?.notes || 'None'}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Controller</div>
-                        <div class="detail-photos">${showPhotos(data.controller?.photo)}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Pump</div>
-                        <div class="detail-photos">${showPhotos(data.pump?.photo)}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Panels</div>
-                         <div>Type: ${data.panels?.type || '-'}</div>
-                        <div class="detail-photos">${showPhotos(data.panels?.photo)}</div>
-                    </div>
-                     <div class="detail-row">
-                        <div class="detail-label">Site/Issues</div>
-                        <div class="detail-photos">${showPhotos(data.issues?.photos || data.issue_photos)}</div>
-                    </div>
+                updatePhotoCounters();
+                saveDraft();
+            };
+
+            input.click();
+        };
+
+        window.retakePhoto = (photoType) => {
+            capturedPhotos[photoType] = null;
+            document.getElementById(`preview_${photoType}`).innerHTML = '';
+            document.getElementById(`photo_${photoType}`).classList.remove('captured');
+            updatePhotoCounters();
+            saveDraft();
+        };
+
+        window.handleIssuePhoto = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            capturedPhotos.issue_photo = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('issuePhotoPreview').innerHTML = `
+                    <img src="${e.target.result}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">
                 `;
-                body.innerHTML = html;
+            };
+            reader.readAsDataURL(file);
+        };
 
-            } catch (e) {
-                console.error(e);
-                body.innerHTML = '<p style="color:red">Error loading details.</p>';
+        window.toggleMaterialIssue = () => {
+            if (document.getElementById('hasMaterialIssue').checked) {
+                document.getElementById('installationStatus').value = 'pending_material';
             }
         };
 
-        window.handleInstallationPhotos = () => {
-            const input = document.getElementById('installationPhotos');
-            installationPhotos = Array.from(input.files);
-            displayPhotos('installationPreview', 'installationCount', installationPhotos, 'installation');
+        function updatePhotoCounters() {
+            const required = [
+                'farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump',
+                'foundation', 'earthing_foundation',
+                'controller_serial', 'pump_serial', 'motor_serial',
+                'farmer_aadhar'
+            ];
+
+            const captured = required.filter(key => capturedPhotos[key]).length;
+            document.getElementById('photoCount').textContent = `${captured}/9`;
+
+            // Section counters
+            const systemPhotos = ['farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump'];
+            document.getElementById('systemCounter').textContent = `${systemPhotos.filter(k => capturedPhotos[k]).length}/3`;
+
+            const foundationPhotos = ['foundation', 'earthing_foundation'];
+            document.getElementById('foundationCounter').textContent = `${foundationPhotos.filter(k => capturedPhotos[k]).length}/2`;
+
+            const serialPhotos = ['controller_serial', 'pump_serial', 'motor_serial'];
+            document.getElementById('serialCounter').textContent = `${serialPhotos.filter(k => capturedPhotos[k]).length}/3`;
+
+            const docPhotos = ['farmer_aadhar'];
+            document.getElementById('docCounter').textContent = `${docPhotos.filter(k => capturedPhotos[k]).length}/1`;
+        }
+
+        window.saveDraft = () => {
+            if (!selectedFarmer) return;
+
+            const draft = {
+                farmer_id: selectedFarmer.id,
+                captured: Object.keys(capturedPhotos).reduce((acc, key) => {
+                    acc[key] = !!capturedPhotos[key];
+                    return acc;
+                }, {}),
+                issueNotes: document.getElementById('issueNotes').value,
+                hasMaterialIssue: document.getElementById('hasMaterialIssue').checked,
+                timestamp: Date.now()
+            };
+
+            localStorage.setItem(`installation_draft_${selectedFarmer.id}`, JSON.stringify(draft));
+            console.log('Draft saved');
         };
 
-        window.handleIssuePhotos = () => {
-            const input = document.getElementById('issuePhotos');
-            issuePhotos = Array.from(input.files);
-            displayPhotos('issuePreview', 'issueCount', issuePhotos, 'issue');
-        };
+        window.goToReview = () => {
+            const required = [
+                'farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump',
+                'foundation', 'earthing_foundation',
+                'controller_serial', 'pump_serial', 'motor_serial',
+                'farmer_aadhar'
+            ];
 
-        function displayPhotos(previewId, countId, photos, type) {
-            const preview = document.getElementById(previewId);
-            const countDiv = document.getElementById(countId);
+            const captured = required.filter(key => capturedPhotos[key]).length;
 
-            preview.innerHTML = '';
-            countDiv.textContent = photos.length > 0 ? `✓ ${photos.length} photo(s) selected` : '';
+            if (captured < 9) {
+                const proceed = confirm(
+                    `⚠️ Warning: Only ${captured}/9 required photos captured.\n\n` +
+                    `Installation will be marked as partial.\n\nContinue?`
+                );
+                if (!proceed) return;
+            }
 
-            photos.forEach((file, index) => {
+            document.getElementById('capturePhotosStep').classList.add('hidden');
+            document.getElementById('reviewStep').classList.remove('hidden');
+            updateProgress(3);
+
+            document.getElementById('reviewFarmerInfo').innerHTML = document.getElementById('farmerInfoHeader').innerHTML;
+
+            // Show photos
+            const reviewPhotos = document.getElementById('reviewPhotos');
+            reviewPhotos.innerHTML = '';
+
+            [...required, 'extra_1', 'extra_2'].forEach(key => {
+                if (capturedPhotos[key]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const div = document.createElement('div');
+                        div.className = 'review-photo';
+                        div.innerHTML = `
+                            <img src="${e.target.result}">
+                            <div class="review-photo-label">${key.replace(/_/g, ' ').toUpperCase()}</div>
+                        `;
+                        reviewPhotos.appendChild(div);
+                    };
+                    reader.readAsDataURL(capturedPhotos[key]);
+                }
+            });
+
+            if (capturedPhotos.issue_photo) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const div = document.createElement('div');
-                    div.className = 'photo-item';
+                    div.className = 'review-photo';
                     div.innerHTML = `
                         <img src="${e.target.result}">
-                        <button type="button" class="remove-photo" onclick="window.removePhoto('${type}', ${index})">×</button>
+                        <div class="review-photo-label">ISSUE PHOTO</div>
                     `;
-                    preview.appendChild(div);
+                    reviewPhotos.appendChild(div);
                 };
-                reader.readAsDataURL(file);
-            });
-        }
+                reader.readAsDataURL(capturedPhotos.issue_photo);
+            }
 
-        window.removePhoto = (type, index) => {
-            if (type === 'installation') {
-                installationPhotos.splice(index, 1);
-                displayPhotos('installationPreview', 'installationCount', installationPhotos, 'installation');
+            // Init signature
+            setTimeout(() => {
+                const canvas = document.getElementById('signature-pad-worker');
+                if (canvas) {
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                    signaturePadWorker = new SignaturePad(canvas, { minWidth: 1, maxWidth: 3, backgroundColor: 'rgb(255, 255, 255)' });
+                }
+            }, 300);
+
+            // Auto-set status
+            if (captured === 9 && !document.getElementById('hasMaterialIssue').checked) {
+                document.getElementById('installationStatus').value = 'complete';
+            } else if (document.getElementById('hasMaterialIssue').checked) {
+                document.getElementById('installationStatus').value = 'pending_material';
             } else {
-                issuePhotos.splice(index, 1);
-                displayPhotos('issuePreview', 'issueCount', issuePhotos, 'issue');
+                document.getElementById('installationStatus').value = 'partial';
             }
         };
 
+        window.goBackToPhotos = () => {
+            document.getElementById('reviewStep').classList.add('hidden');
+            document.getElementById('capturePhotosStep').classList.remove('hidden');
+            updateProgress(2);
+        };
+
+        window.clearSignature = () => {
+            if (signaturePadWorker) signaturePadWorker.clear();
+        };
+
         window.submitInstallation = async () => {
-            if (!selectedFarmer) {
-                showError('Please select a farmer');
-                return;
-            }
-
-            if (installationPhotos.length === 0) {
-                showError('Please add at least one installation photo');
-                return;
-            }
-
             const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.textContent;
+
+            if (!signaturePadWorker || signaturePadWorker.isEmpty()) {
+                alert('Please provide worker signature.');
+                return;
+            }
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Uploading...';
 
             try {
-                // Upload installation photos
-                const installationUrls = [];
-                for (const photo of installationPhotos) {
-                    const url = await uploadPhoto(photo, 'installation');
-                    installationUrls.push(url);
+                const location = await getGeolocation();
+
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const farmerId = selectedFarmer.id;
+                const installationId = `install_${Date.now()}`;
+                const basePath = `uploads/${year}/${month}/${farmerId}/installation/${installationId}`;
+
+                // Upload signature
+                const workerSigRef = ref(storage, `${basePath}/signatures/worker.png`);
+                await uploadString(workerSigRef, signaturePadWorker.toDataURL(), 'data_url');
+                const workerSigUrl = await getDownloadURL(workerSigRef);
+
+                // Upload photos
+                const photoUrls = {};
+                for (const [key, file] of Object.entries(capturedPhotos)) {
+                    if (file && key !== 'issue_photo') {
+                        const compressed = await compressImage(file);
+                        const path = `${basePath}/photos/${key}.jpg`;
+                        const url = await uploadWithRetry(path, compressed);
+                        photoUrls[key] = url;
+                    }
                 }
 
-                // Upload issue photos
-                const issueUrls = [];
-                for (const photo of issuePhotos) {
-                    const url = await uploadPhoto(photo, 'installation_issues');
-                    issueUrls.push(url);
+                // Upload issue photo
+                let issuePhotoUrl = null;
+                if (capturedPhotos.issue_photo) {
+                    const compressed = await compressImage(capturedPhotos.issue_photo);
+                    const path = `${basePath}/issues/issue_photo.jpg`;
+                    issuePhotoUrl = await uploadWithRetry(path, compressed);
                 }
 
                 // Save to Firestore
-                await addDoc(collection(db, 'installation_records'), {
+                const installationData = {
                     farmer_id: selectedFarmer.id,
                     farmer_name: selectedFarmer.name,
-                    installation_photos: installationUrls,
-                    issue_photos: issueUrls,
-                    issue_description: document.getElementById('issueDescription').value.trim(),
+                    farmer_details: {
+                        beneficiaryNo: selectedFarmer.BENEFICIARY_NO || '',
+                        village: selectedFarmer.VILLAGE_NAME || selectedFarmer.location || '',
+                        taluka: selectedFarmer.TALUKA_NAME || '',
+                        pumpLoad: selectedFarmer.PUMP_LOAD || selectedFarmer.hp || ''
+                    },
+                    installation_status: document.getElementById('installationStatus').value,
+                    photos: photoUrls,
+                    serial_numbers: serialNumbers,
+                    issues: {
+                        has_issues: !!document.getElementById('issueNotes').value || document.getElementById('hasMaterialIssue').checked,
+                        notes: document.getElementById('issueNotes').value.trim(),
+                        photo: issuePhotoUrl,
+                        material_shortage: document.getElementById('hasMaterialIssue').checked
+                    },
+                    signature_worker: workerSigUrl,
+                    location: location,
+                    installed_by: currentUser.uid,
+                    installed_by_name: currentUser.displayName || currentUser.email,
                     worker_email: currentUser.email,
-                    timestamp: serverTimestamp()
-                });
+                    timestamp: serverTimestamp(),
+                    started_at: serverTimestamp()
+                };
 
-                // Update farmer status
+                if (document.getElementById('installationStatus').value === 'complete') {
+                    installationData.completed_at = serverTimestamp();
+                }
+
+                await addDoc(collection(db, 'installation_records'), installationData);
+
+                // Update farmer master
                 await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {
-                    installation_status: 'done',
-                    installed_by_email: currentUser.email,
+                    installation_status: document.getElementById('installationStatus').value,
+                    installation_started_at: serverTimestamp(),
                     installed_by_uid: currentUser.uid,
-                    installed_at: serverTimestamp(),
-                    updatedAt: serverTimestamp()
+                    installed_by_email: currentUser.email,
+                    last_updated: serverTimestamp()
                 });
 
-                showSuccess('✓ Installation logged successfully!');
-                setTimeout(() => {
-                    window.location.href = 'home.html';
-                }, 2000);
+                if (document.getElementById('installationStatus').value === 'complete') {
+                    await updateDoc(doc(db, 'farmers_master', selectedFarmer.id), {
+                        installation_completed_at: serverTimestamp()
+                    });
+                }
+
+                alert('Installation data uploaded successfully! ✅');
+                clearDraft();
+                window.location.href = 'home.html';
 
             } catch (error) {
-                console.error('Error:', error);
-                showError('Error uploading: ' + error.message);
+                console.error('Upload error:', error);
+                alert('Upload failed: ' + error.message);
                 submitBtn.disabled = false;
-                submitBtn.textContent = '✓ Submit Installation Log';
+                submitBtn.textContent = originalText;
             }
         };
 
-        async function uploadPhoto(file, folder) {
-            const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-            await uploadBytes(storageRef, file);
-            return await getDownloadURL(storageRef);
+        function clearDraft() {
+            if (selectedFarmer) {
+                localStorage.removeItem(`installation_draft_${selectedFarmer.id}`);
+            }
         }
 
-        function showSuccess(msg) {
-            const div = document.getElementById('success');
-            div.textContent = msg;
-            div.style.display = 'block';
-            setTimeout(() => div.style.display = 'none', 5000);
+        async function compressImage(file) {
+            const MAX_WIDTH = 1920;
+            const MAX_HEIGHT = 1920;
+            const quality = 0.8;
+
+            const imageBitmap = await createImageBitmap(file);
+            const aspectRatio = imageBitmap.width / imageBitmap.height;
+
+            let targetWidth = imageBitmap.width;
+            let targetHeight = imageBitmap.height;
+
+            if (targetWidth > MAX_WIDTH) {
+                targetWidth = MAX_WIDTH;
+                targetHeight = targetWidth / aspectRatio;
+            }
+            if (targetHeight > MAX_HEIGHT) {
+                targetHeight = MAX_HEIGHT;
+                targetWidth = targetHeight * aspectRatio;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imageBitmap, 0, 0, targetWidth, targetHeight);
+
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    }));
+                }, 'image/jpeg', quality);
+            });
         }
 
-        function showError(msg) {
-            const div = document.getElementById('error');
-            div.textContent = msg;
-            div.style.display = 'block';
-            setTimeout(() => div.style.display = 'none', 5000);
+        async function uploadWithRetry(storagePath, file, maxRetries = 3) {
+            const storageRef = ref(storage, storagePath);
+
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    return await new Promise((resolve, reject) => {
+                        const uploadTask = uploadBytesResumable(storageRef, file);
+                        uploadTask.on('state_changed',
+                            (snapshot) => {
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                console.log(`Upload ${progress.toFixed(2)}% complete`);
+                            },
+                            (error) => reject(error),
+                            async () => {
+                                const url = await getDownloadURL(uploadTask.snapshot.ref);
+                                resolve(url);
+                            }
+                        );
+                    });
+                } catch (error) {
+                    if (attempt === maxRetries - 1) throw error;
+                    await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+                }
+            }
+        }
+
+        function getGeolocation() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve(null);
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (position) => resolve({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    }),
+                    () => resolve(null)
+                );
+            });
+        }
+
+        function updateProgress(step) {
+            document.querySelectorAll('.step').forEach((s, i) => {
+                if (i < step - 1) {
+                    s.classList.add('completed');
+                    s.classList.remove('active');
+                } else if (i === step - 1) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active', 'completed');
+                }
+            });
+            document.getElementById('progressLine').style.width = `${((step - 1) / 2) * 100}%`;
         }
     </script>
 </body>

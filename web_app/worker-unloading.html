@@ -819,6 +819,7 @@
             panels: [], // Array of { qr: '', index: 0 }
             panelType: '', // Panel wattage type (500/535/520 Wp)
             expectedPanels: 0,
+            extraPanels: [], // Additional panels beyond expected count
             issues: []
         };
         let html5QrCode = null;
@@ -845,6 +846,7 @@
                     panels: scannedData.panels.map(p => ({ qr: p.qr, index: p.index })), // Save panel array
                     panelType: scannedData.panelType || '',
                     expectedPanels: scannedData.expectedPanels,
+                    extraPanels: scannedData.extraPanels || [], // Save extra panels
                     issues: [] // Photos lost
                 },
                 step: 2, // Always resume at scanning
@@ -865,6 +867,7 @@
             scannedData.expectedPanels = draft.data.expectedPanels || 0;
             scannedData.panelType = draft.data.panelType || '';
             scannedData.panels = draft.data.panels || [];
+            scannedData.extraPanels = draft.data.extraPanels || []; // Restore extra panels
 
             // Move to Step 2
             document.getElementById('selectFarmerStep').classList.add('hidden');
@@ -1862,7 +1865,10 @@
             const expected = rules[hp] || 0;
             scannedData.expectedPanels = expected;
 
-            const current = (scannedData.panels && scannedData.panels.qr ? 1 : 0) + scannedData.extraPanels.length;
+            // Count filled panels from panels array
+            const current = (scannedData.panels && Array.isArray(scannedData.panels))
+                ? scannedData.panels.filter(p => p && p.qr).length
+                : 0;
 
             const counterDiv = document.getElementById('panelCounter');
             if (expected > 0) {
