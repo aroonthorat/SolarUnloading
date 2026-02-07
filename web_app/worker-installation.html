@@ -535,7 +535,7 @@
 
                 <div class="photo-item" id="photo_foundation">
                     <div class="photo-label">
-                        <span>4. Foundation Photo</span>
+                        <span>4. Farmer with Controller and Foundation Photo</span>
                         <span class="required-badge">REQUIRED</span>
                     </div>
                     <div class="photo-buttons">
@@ -546,7 +546,7 @@
 
                 <div class="photo-item" id="photo_earthing_foundation">
                     <div class="photo-label">
-                        <span>5. Earthing Foundation</span>
+                        <span>5. Earthing (L.A) Photo</span>
                         <span class="required-badge">REQUIRED</span>
                     </div>
                     <div class="photo-buttons">
@@ -554,6 +554,25 @@
                             Photo</button>
                     </div>
                     <div id="preview_earthing_foundation"></div>
+                </div>
+            </div>
+
+            <!-- Solar Panels -->
+            <div class="photo-section">
+                <div class="section-title">
+                    <span>☀️ Solar Panels</span>
+                    <span id="panelsCounter" style="font-size: 14px; color: #28a745;">0/1</span>
+                </div>
+
+                <div class="photo-item" id="photo_solar_panels">
+                    <div class="photo-label">
+                        <span>6. Solar Panels Photo</span>
+                        <span class="required-badge">REQUIRED</span>
+                    </div>
+                    <div class="photo-buttons">
+                        <button class="btn btn-primary" onclick="capturePhoto('solar_panels')">📷 Capture Photo</button>
+                    </div>
+                    <div id="preview_solar_panels"></div>
                 </div>
             </div>
 
@@ -566,7 +585,7 @@
 
                 <div class="photo-item" id="photo_controller_serial">
                     <div class="photo-label">
-                        <span>6. Controller Serial Number</span>
+                        <span>7. Controller Serial Number</span>
                         <span class="required-badge">REQUIRED</span>
                     </div>
                     <div id="controller_serial_ref" class="serial-reference hidden"></div>
@@ -579,7 +598,7 @@
 
                 <div class="photo-item" id="photo_pump_serial">
                     <div class="photo-label">
-                        <span>7. Pump Serial Number</span>
+                        <span>8. Pump Serial Number</span>
                         <span class="required-badge">REQUIRED</span>
                     </div>
                     <div id="pump_serial_ref" class="serial-reference hidden"></div>
@@ -591,7 +610,7 @@
 
                 <div class="photo-item" id="photo_motor_serial">
                     <div class="photo-label">
-                        <span>8. Motor Serial Number</span>
+                        <span>9. Motor Serial Number</span>
                         <span class="required-badge">REQUIRED</span>
                     </div>
                     <div id="motor_serial_ref" class="serial-reference hidden"></div>
@@ -611,7 +630,7 @@
 
                 <div class="photo-item" id="photo_farmer_aadhar">
                     <div class="photo-label">
-                        <span>9. Farmer Aadhar Card</span>
+                        <span>10. Farmer Aadhar Card</span>
                         <span class="required-badge">REQUIRED</span>
                     </div>
                     <div class="photo-buttons">
@@ -692,6 +711,16 @@
                 <h3 style="margin: 20px 0 10px 0;">Captured Photos</h3>
                 <div id="reviewPhotos" class="review-grid"></div>
 
+                <h3 style="margin: 20px 0 10px 0;">Location</h3>
+                <div id="locationInfo"
+                    style="background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="font-size: 14px; color: #0d47a1;">
+                        <div style="margin-bottom: 5px;">📍 <strong>Latitude:</strong> <span
+                                id="displayLatitude">Capturing...</span></div>
+                        <div><strong>Longitude:</strong> <span id="displayLongitude">Capturing...</span></div>
+                    </div>
+                </div>
+
                 <h3 style="margin: 20px 0 10px 0;">Installation Status</h3>
                 <select id="installationStatus" class="search-input" style="font-size: 14px;">
                     <option value="complete">✅ Complete - All photos captured, no issues</option>
@@ -717,7 +746,7 @@
 
     <!-- Progress Counter -->
     <div id="progressCounter" class="progress-counter hidden">
-        <span id="photoCount">0/9</span> Photos
+        <span id="photoCount">0/10</span> Photos
     </div>
 
     <!-- Firebase & JavaScript -->
@@ -750,6 +779,7 @@
             farmer_with_pump: null,
             foundation: null,
             earthing_foundation: null,
+            solar_panels: null,
             controller_serial: null,
             pump_serial: null,
             motor_serial: null,
@@ -760,6 +790,130 @@
         };
         let serialNumbers = {};
         let signaturePadWorker = null;
+        let installationDB = null;
+        let capturedLocation = null;
+
+        // IndexedDB Setup for Instant Photo Persistence
+        function openInstallationDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('InstallationPhotosDB', 1);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('photos')) {
+                        db.createObjectStore('photos', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // Save photo to IndexedDB instantly
+        async function savePhotoToIndexedDB(photoKey, file, dataUrl) {
+            try {
+                if (!installationDB) {
+                    installationDB = await openInstallationDB();
+                }
+
+                const transaction = installationDB.transaction(['photos'], 'readwrite');
+                const store = transaction.objectStore('photos');
+
+                const photoData = {
+                    id: `${selectedFarmer.id}_${photoKey}`,
+                    farmer_id: selectedFarmer.id,
+                    photo_key: photoKey,
+                    file: file,
+                    dataUrl: dataUrl,
+                    timestamp: Date.now()
+                };
+
+                await store.put(photoData);
+                console.log(`✅ Photo saved to IndexedDB: ${photoKey}`);
+            } catch (error) {
+                console.error('IndexedDB save error:', error);
+            }
+        }
+
+        // Load photos from IndexedDB for current farmer
+        async function loadPhotosFromIndexedDB(farmerId) {
+            try {
+                if (!installationDB) {
+                    installationDB = await openInstallationDB();
+                }
+
+                const transaction = installationDB.transaction(['photos'], 'readonly');
+                const store = transaction.objectStore('photos');
+                const allPhotos = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Filter photos for current farmer
+                const farmerPhotos = allPhotos.filter(p => p.farmer_id === farmerId);
+
+                for (const photoData of farmerPhotos) {
+                    const photoKey = photoData.photo_key;
+                    capturedPhotos[photoKey] = photoData.file;
+
+                    // Restore preview
+                    const preview = document.getElementById(`preview_${photoKey}`);
+                    if (preview) {
+                        preview.innerHTML = `
+                            <img src="${photoData.dataUrl}" class="photo-preview">
+                            <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" 
+                                    onclick="retakePhoto('${photoKey}')">🔄 Retake Photo</button>
+                        `;
+                        document.getElementById(`photo_${photoKey}`).classList.add('captured');
+                    }
+                }
+
+                updatePhotoCounters();
+                console.log(`✅ Loaded ${farmerPhotos.length} photos from IndexedDB`);
+            } catch (error) {
+                console.error('IndexedDB load error:', error);
+            }
+        }
+
+        // Clear photos from IndexedDB after successful upload
+        async function clearPhotosFromIndexedDB(farmerId) {
+            try {
+                if (!installationDB) {
+                    installationDB = await openInstallationDB();
+                }
+
+                const transaction = installationDB.transaction(['photos'], 'readwrite');
+                const store = transaction.objectStore('photos');
+                const allPhotos = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Delete photos for this farmer
+                for (const photo of allPhotos) {
+                    if (photo.farmer_id === farmerId) {
+                        await store.delete(photo.id);
+                    }
+                }
+
+                console.log(`✅ Cleared photos from IndexedDB for farmer: ${farmerId}`);
+            } catch (error) {
+                console.error('IndexedDB clear error:', error);
+            }
+        }
+
+        // Initialize IndexedDB on page load
+        (async () => {
+            try {
+                installationDB = await openInstallationDB();
+                console.log('✅ IndexedDB initialized');
+            } catch (error) {
+                console.error('Failed to initialize IndexedDB:', error);
+            }
+        })();
 
         // Check auth
         onAuthStateChanged(auth, (user) => {
@@ -925,6 +1079,9 @@
             document.getElementById('capturePhotosStep').classList.remove('hidden');
             document.getElementById('progressCounter').classList.remove('hidden');
             updateProgress(2);
+
+            // Load any previously saved photos from IndexedDB
+            await loadPhotosFromIndexedDB(farmer.id);
         };
 
         // Photo capture
@@ -934,7 +1091,7 @@
             input.accept = 'image/*';
             input.capture = 'environment';
 
-            input.onchange = (e) => {
+            input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
 
@@ -946,15 +1103,20 @@
                 capturedPhotos[photoType] = file;
 
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
+                    const dataUrl = event.target.result;
+
                     const preview = document.getElementById(`preview_${photoType}`);
                     preview.innerHTML = `
-                        <img src="${event.target.result}" class="photo-preview">
+                        <img src="${dataUrl}" class="photo-preview">
                         <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" 
                                 onclick="retakePhoto('${photoType}')">🔄 Retake Photo</button>
                     `;
 
                     document.getElementById(`photo_${photoType}`).classList.add('captured');
+
+                    // INSTANT SAVE to IndexedDB for offline support
+                    await savePhotoToIndexedDB(photoType, file, dataUrl);
                 };
                 reader.readAsDataURL(file);
 
@@ -965,12 +1127,24 @@
             input.click();
         };
 
-        window.retakePhoto = (photoType) => {
+        window.retakePhoto = async (photoType) => {
             capturedPhotos[photoType] = null;
             document.getElementById(`preview_${photoType}`).innerHTML = '';
             document.getElementById(`photo_${photoType}`).classList.remove('captured');
             updatePhotoCounters();
             saveDraft();
+
+            // Remove from IndexedDB
+            if (selectedFarmer && installationDB) {
+                try {
+                    const transaction = installationDB.transaction(['photos'], 'readwrite');
+                    const store = transaction.objectStore('photos');
+                    await store.delete(`${selectedFarmer.id}_${photoType}`);
+                    console.log(`✅ Removed photo from IndexedDB: ${photoType}`);
+                } catch (error) {
+                    console.error('Error removing photo from IndexedDB:', error);
+                }
+            }
         };
 
         window.handleIssuePhoto = (input) => {
@@ -998,12 +1172,13 @@
             const required = [
                 'farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump',
                 'foundation', 'earthing_foundation',
+                'solar_panels',
                 'controller_serial', 'pump_serial', 'motor_serial',
                 'farmer_aadhar'
             ];
 
             const captured = required.filter(key => capturedPhotos[key]).length;
-            document.getElementById('photoCount').textContent = `${captured}/9`;
+            document.getElementById('photoCount').textContent = `${captured}/10`;
 
             // Section counters
             const systemPhotos = ['farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump'];
@@ -1011,6 +1186,9 @@
 
             const foundationPhotos = ['foundation', 'earthing_foundation'];
             document.getElementById('foundationCounter').textContent = `${foundationPhotos.filter(k => capturedPhotos[k]).length}/2`;
+
+            const panelsPhotos = ['solar_panels'];
+            document.getElementById('panelsCounter').textContent = `${panelsPhotos.filter(k => capturedPhotos[k]).length}/1`;
 
             const serialPhotos = ['controller_serial', 'pump_serial', 'motor_serial'];
             document.getElementById('serialCounter').textContent = `${serialPhotos.filter(k => capturedPhotos[k]).length}/3`;
@@ -1037,19 +1215,20 @@
             console.log('Draft saved');
         };
 
-        window.goToReview = () => {
+        window.goToReview = async () => {
             const required = [
                 'farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump',
                 'foundation', 'earthing_foundation',
+                'solar_panels',
                 'controller_serial', 'pump_serial', 'motor_serial',
                 'farmer_aadhar'
             ];
 
             const captured = required.filter(key => capturedPhotos[key]).length;
 
-            if (captured < 9) {
+            if (captured < 10) {
                 const proceed = confirm(
-                    `⚠️ Warning: Only ${captured}/9 required photos captured.\n\n` +
+                    `⚠️ Warning: Only ${captured}/10 required photos captured.\n\n` +
                     `Installation will be marked as partial.\n\nContinue?`
                 );
                 if (!proceed) return;
@@ -1060,6 +1239,16 @@
             updateProgress(3);
 
             document.getElementById('reviewFarmerInfo').innerHTML = document.getElementById('farmerInfoHeader').innerHTML;
+
+            // Capture location
+            capturedLocation = await getGeolocation();
+            if (capturedLocation) {
+                document.getElementById('displayLatitude').textContent = capturedLocation.lat.toFixed(6);
+                document.getElementById('displayLongitude').textContent = capturedLocation.lon.toFixed(6);
+            } else {
+                document.getElementById('displayLatitude').textContent = 'Not available';
+                document.getElementById('displayLongitude').textContent = 'Not available';
+            }
 
             // Show photos
             const reviewPhotos = document.getElementById('reviewPhotos');
@@ -1108,7 +1297,7 @@
             }, 300);
 
             // Auto-set status
-            if (captured === 9 && !document.getElementById('hasMaterialIssue').checked) {
+            if (captured === 10 && !document.getElementById('hasMaterialIssue').checked) {
                 document.getElementById('installationStatus').value = 'complete';
             } else if (document.getElementById('hasMaterialIssue').checked) {
                 document.getElementById('installationStatus').value = 'pending_material';
@@ -1140,7 +1329,8 @@
             submitBtn.textContent = 'Uploading...';
 
             try {
-                const location = await getGeolocation();
+                // Use already captured location from review step
+                const location = capturedLocation || await getGeolocation();
 
                 const now = new Date();
                 const year = now.getFullYear();
@@ -1223,6 +1413,10 @@
                 }
 
                 alert('Installation data uploaded successfully! ✅');
+
+                // Clear photos from IndexedDB after successful upload
+                await clearPhotosFromIndexedDB(selectedFarmer.id);
+
                 clearDraft();
                 window.location.href = 'home.html';
 
