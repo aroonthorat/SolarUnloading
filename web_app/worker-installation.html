@@ -405,12 +405,48 @@
             position: relative;
         }
 
-        .review-photo img {
+        .photo-preview {
             width: 100%;
-            height: 150px;
+            max-height: 200px;
             object-fit: cover;
             border-radius: 8px;
-            border: 2px solid #28a745;
+        }
+
+        .panel-photo-box {
+            background: #f9f9f9;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .panel-photo-box.captured {
+            border-color: #28a745;
+            border-style: solid;
+            background: #f0fff4;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .serial-ref {
+            font-size: 11px;
+            color: #0d47a1;
+            background: #e3f2fd;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .panel-status {
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .review-photo-label {
@@ -561,18 +597,11 @@
             <div class="photo-section">
                 <div class="section-title">
                     <span>☀️ Solar Panels</span>
-                    <span id="panelsCounter" style="font-size: 14px; color: #28a745;">0/1</span>
+                    <span id="panelsCounter" style="font-size: 14px; color: #28a745;">0/0</span>
                 </div>
 
-                <div class="photo-item" id="photo_solar_panels">
-                    <div class="photo-label">
-                        <span>6. Solar Panels Photo</span>
-                        <span class="required-badge">REQUIRED</span>
-                    </div>
-                    <div class="photo-buttons">
-                        <button class="btn btn-primary" onclick="capturePhoto('solar_panels')">📷 Capture Photo</button>
-                    </div>
-                    <div id="preview_solar_panels"></div>
+                <div id="panelPhotosContainer">
+                    <p style="color: #999; text-align: center; padding: 20px;">Select a farmer to load panels</p>
                 </div>
             </div>
 
@@ -746,7 +775,7 @@
 
     <!-- Progress Counter -->
     <div id="progressCounter" class="progress-counter hidden">
-        <span id="photoCount">0/10</span> Photos
+        <span id="photoCount">0/9</span> Photos
     </div>
 
     <!-- Firebase & JavaScript -->
@@ -779,7 +808,7 @@
             farmer_with_pump: null,
             foundation: null,
             earthing_foundation: null,
-            solar_panels: null,
+            panels: [],  // Array of panel photos
             controller_serial: null,
             pump_serial: null,
             motor_serial: null,
@@ -789,6 +818,8 @@
             issue_photo: null
         };
         let serialNumbers = {};
+        let panelSerials = [];  // Panel serial numbers from unloading
+        let expectedPanelCount = 0;
         let signaturePadWorker = null;
         let installationDB = null;
         let capturedLocation = null;
@@ -1046,6 +1077,13 @@
                         motor: unloadingData.motor?.qr || ''
                     };
 
+                    // Load panel data
+                    panelSerials = unloadingData.panels || [];
+                    expectedPanelCount = panelSerials.length;
+
+                    // Generate panel photo boxes
+                    generatePanelPhotoBoxes();
+
                     // Show references
                     if (serialNumbers.controller) {
                         document.getElementById('controller_serial_ref').textContent = `From Unloading: ${serialNumbers.controller}`;
@@ -1147,6 +1185,114 @@
             }
         };
 
+        // Generate panel photo boxes
+        function generatePanelPhotoBoxes() {
+            const container = document.getElementById('panelPhotosContainer');
+            container.innerHTML = '';
+
+            if (expectedPanelCount === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No panels found in unloading record</p>';
+                return;
+            }
+
+            for (let i = 0; i < expectedPanelCount; i++) {
+                const panelBox = document.createElement('div');
+                panelBox.className = 'panel-photo-box';
+                panelBox.id = `panel_photo_${i}`;
+
+                const serialRef = panelSerials[i]?.qr || `Panel ${i + 1}`;
+
+                panelBox.innerHTML = `
+                    <div class="panel-header">
+                        <strong style="color: #333;">Panel ${i + 1}</strong>
+                        ${panelSerials[i] ? `<span class="serial-ref">SN: ${serialRef}</span>` : ''}
+                        <span id="panel_${i}_status" class="panel-status" style="color: #999;">⏳ Pending</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="capturePanelPhoto(${i})" style="width: 100%;">
+                        \ud83d\udcf7 Capture Panel ${i + 1} Photo
+                    </button>
+                    <div id="preview_panel_${i}"></div>
+                `;
+
+                container.appendChild(panelBox);
+            }
+
+            document.getElementById('panelsCounter').textContent = `0/${expectedPanelCount}`;
+        }
+
+        // Capture individual panel photo
+        window.capturePanelPhoto = (index) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Photo too large! Maximum 10MB allowed.');
+                    return;
+                }
+
+                if (!capturedPhotos.panels) {
+                    capturedPhotos.panels = [];
+                }
+
+                capturedPhotos.panels[index] = file;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const dataUrl = event.target.result;
+
+                    const preview = document.getElementById(`preview_panel_${index}`);
+                    preview.innerHTML = `
+                        <img src="${dataUrl}" class="photo-preview" style="margin-top: 10px;">
+                        <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" 
+                                onclick="retakePanelPhoto(${index})">\ud83d\udd04 Retake Panel ${index + 1}</button>
+                    `;
+
+                    document.getElementById(`panel_${index}_status`).innerHTML = '<span style="color: #28a745;">\u2705 Captured</span>';
+                    document.getElementById(`panel_photo_${index}`).classList.add('captured');
+
+                    await savePhotoToIndexedDB(`panel_${index}`, file, dataUrl);
+                };
+                reader.readAsDataURL(file);
+
+                updatePhotoCounters();
+                saveDraft();
+            };
+
+            input.click();
+        };
+
+        // Retake panel photo
+        window.retakePanelPhoto = async (index) => {
+            if (capturedPhotos.panels) {
+                capturedPhotos.panels[index] = null;
+            }
+
+            document.getElementById(`preview_panel_${index}`).innerHTML = '';
+            document.getElementById(`panel_${index}_status`).innerHTML = '<span style="color: #999;">\u23f3 Pending</span>';
+            document.getElementById(`panel_photo_${index}`).classList.remove('captured');
+
+            updatePhotoCounters();
+            saveDraft();
+
+            if (selectedFarmer && installationDB) {
+                try {
+                    const transaction = installationDB.transaction(['photos'], 'readwrite');
+                    const store = transaction.objectStore('photos');
+                    await store.delete(`${selectedFarmer.id}_panel_${index}`);
+                    console.log(`✅ Removed panel photo from IndexedDB: panel_${index}`);
+                } catch (error) {
+                    console.error('Error removing panel photo from IndexedDB:', error);
+                }
+            }
+        };
+
+
         window.handleIssuePhoto = (input) => {
             const file = input.files[0];
             if (!file) return;
@@ -1172,13 +1318,16 @@
             const required = [
                 'farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump',
                 'foundation', 'earthing_foundation',
-                'solar_panels',
                 'controller_serial', 'pump_serial', 'motor_serial',
                 'farmer_aadhar'
             ];
 
-            const captured = required.filter(key => capturedPhotos[key]).length;
-            document.getElementById('photoCount').textContent = `${captured}/10`;
+            const baseCaptured = required.filter(key => capturedPhotos[key]).length;
+            const panelsCaptured = (capturedPhotos.panels || []).filter(p => p).length;
+            const totalCaptured = baseCaptured + panelsCaptured;
+            const totalRequired = required.length + expectedPanelCount;
+
+            document.getElementById('photoCount').textContent = `${totalCaptured}/${totalRequired}`;
 
             // Section counters
             const systemPhotos = ['farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump'];
@@ -1187,8 +1336,8 @@
             const foundationPhotos = ['foundation', 'earthing_foundation'];
             document.getElementById('foundationCounter').textContent = `${foundationPhotos.filter(k => capturedPhotos[k]).length}/2`;
 
-            const panelsPhotos = ['solar_panels'];
-            document.getElementById('panelsCounter').textContent = `${panelsPhotos.filter(k => capturedPhotos[k]).length}/1`;
+            // Panel counter (dynamic)
+            document.getElementById('panelsCounter').textContent = `${panelsCaptured}/${expectedPanelCount}`;
 
             const serialPhotos = ['controller_serial', 'pump_serial', 'motor_serial'];
             document.getElementById('serialCounter').textContent = `${serialPhotos.filter(k => capturedPhotos[k]).length}/3`;
@@ -1219,16 +1368,19 @@
             const required = [
                 'farmer_with_system', 'farmer_with_water_flow', 'farmer_with_pump',
                 'foundation', 'earthing_foundation',
-                'solar_panels',
                 'controller_serial', 'pump_serial', 'motor_serial',
                 'farmer_aadhar'
             ];
 
-            const captured = required.filter(key => capturedPhotos[key]).length;
+            const baseCaptured = required.filter(key => capturedPhotos[key]).length;
+            const panelsCaptured = (capturedPhotos.panels || []).filter(p => p).length;
+            const totalCaptured = baseCaptured + panelsCaptured;
+            const totalRequired = required.length + expectedPanelCount;
 
-            if (captured < 10) {
+            if (totalCaptured < totalRequired) {
                 const proceed = confirm(
-                    `⚠️ Warning: Only ${captured}/10 required photos captured.\n\n` +
+                    `⚠️ Warning: Only ${totalCaptured}/${totalRequired} required photos captured.\n\n` +
+                    `(Base: ${baseCaptured}/${required.length}, Panels: ${panelsCaptured}/${expectedPanelCount})\n\n` +
                     `Installation will be marked as partial.\n\nContinue?`
                 );
                 if (!proceed) return;
@@ -1270,6 +1422,26 @@
                 }
             });
 
+            // Show panel photos
+            if (capturedPhotos.panels) {
+                capturedPhotos.panels.forEach((file, index) => {
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const div = document.createElement('div');
+                            div.className = 'review-photo';
+                            const serialRef = panelSerials[index]?.qr || '';
+                            div.innerHTML = `
+                                <img src="${e.target.result}">
+                                <div class="review-photo-label">PANEL ${index + 1}${serialRef ? ` - ${serialRef}` : ''}</div>
+                            `;
+                            reviewPhotos.appendChild(div);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
             if (capturedPhotos.issue_photo) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -1297,7 +1469,7 @@
             }, 300);
 
             // Auto-set status
-            if (captured === 10 && !document.getElementById('hasMaterialIssue').checked) {
+            if (totalCaptured === totalRequired && !document.getElementById('hasMaterialIssue').checked) {
                 document.getElementById('installationStatus').value = 'complete';
             } else if (document.getElementById('hasMaterialIssue').checked) {
                 document.getElementById('installationStatus').value = 'pending_material';
@@ -1347,13 +1519,31 @@
                 // Upload photos
                 const photoUrls = {};
                 for (const [key, file] of Object.entries(capturedPhotos)) {
-                    if (file && key !== 'issue_photo') {
+                    if (file && key !== 'panels' && key !== 'issue_photo') {
                         const compressed = await compressImage(file);
                         const path = `${basePath}/photos/${key}.jpg`;
                         const url = await uploadWithRetry(path, compressed);
                         photoUrls[key] = url;
                     }
                 }
+
+                // Upload panel photos
+                const panelPhotoUrls = [];
+                if (capturedPhotos.panels) {
+                    for (let i = 0; i < capturedPhotos.panels.length; i++) {
+                        if (capturedPhotos.panels[i]) {
+                            const compressed = await compressImage(capturedPhotos.panels[i]);
+                            const path = `${basePath}/photos/panel_${i + 1}.jpg`;
+                            const url = await uploadWithRetry(path, compressed);
+                            panelPhotoUrls.push({
+                                index: i + 1,
+                                url: url,
+                                serial: panelSerials[i]?.qr || null
+                            });
+                        }
+                    }
+                }
+                photoUrls.panel_photos = panelPhotoUrls;
 
                 // Upload issue photo
                 let issuePhotoUrl = null;
