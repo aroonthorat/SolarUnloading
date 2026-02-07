@@ -9,6 +9,7 @@
     <meta http-equiv="Expires" content="0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Unloading - Scan Materials</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1297,34 +1298,72 @@
             input.click();
         };
 
-        window.scanQR = async (type) => {
-            currentScanning = type;
-            const readerDiv = document.getElementById(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
-            readerDiv.classList.remove('hidden');
+        let activeScanner = null;
 
-            const html5QrCode = new Html5Qrcode(`qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`);
+        window.scanQR = async (type) => {
+            // Stop any existing scanner
+            if (activeScanner) {
+                try { await activeScanner.stop(); } catch (e) { }
+                try { await activeScanner.clear(); } catch (e) { }
+                activeScanner = null;
+            }
+
+            currentScanning = type;
+            const elementId = `qrReader${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            const readerDiv = document.getElementById(elementId);
+
+            // Show Scanner UI
+            readerDiv.classList.remove('hidden');
+            readerDiv.innerHTML = '<div style="padding:10px; text-align:center;">Requesting Camera...</div>';
+
+            // Add Stop Button
+            const stopBtn = document.createElement('button');
+            stopBtn.innerText = "❌ Stop Scanning";
+            stopBtn.className = "btn btn-secondary";
+            stopBtn.style.margin = "10px auto";
+            stopBtn.style.display = "block";
+            stopBtn.onclick = async () => {
+                if (activeScanner) {
+                    await activeScanner.stop();
+                    await activeScanner.clear();
+                    activeScanner = null;
+                }
+                readerDiv.classList.add('hidden');
+            };
+            readerDiv.parentNode.insertBefore(stopBtn, readerDiv.nextSibling);
+
+            const html5QrCode = new Html5Qrcode(elementId);
+            activeScanner = html5QrCode;
 
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {
-                        fps: 15, // Native detector is fast, 15 is sufficient
-                        experimentalFeatures: {
-                            useBarCodeDetectorIfSupported: true
-                        }
-                        // qrbox removed to scan full frame
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
                     },
                     (decodedText) => {
-                        html5QrCode.stop();
+                        // Success
+                        html5QrCode.stop().then(() => html5QrCode.clear());
+                        activeScanner = null;
                         readerDiv.classList.add('hidden');
+                        stopBtn.remove(); // Remove stop button
                         handleQRScanned(type, decodedText);
+                    },
+                    (errorMessage) => {
+                        // parse error, ignore
                     }
                 );
             } catch (err) {
                 console.error('Scanner error:', err);
+                readerDiv.innerHTML = `<div style="color:red; padding:10px;">Error: ${err.message || 'Camera not allowed'}</div>`;
                 // Fallback: manual entry
-                const code = prompt(`Enter ${type} barcode/serial number manually:`);
-                if (code) handleQRScanned(type, code);
+                setTimeout(() => {
+                    const code = prompt(`Camera failed. Enter ${type} serial manually:`);
+                    if (code) handleQRScanned(type, code);
+                    readerDiv.classList.add('hidden');
+                    stopBtn.remove();
+                }, 1000);
             }
         };
 
