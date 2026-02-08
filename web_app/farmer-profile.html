@@ -580,10 +580,10 @@
 
                         <h4 style="margin: 20px 0 10px 0;">Photos:</h4>
                         <div class="photo-grid">
-                            ${createPhotoItem(data.controller?.photo || data.controller_photo, 'Controller')}
-                            ${createPhotoItem(data.pump?.photo || data.pump_photo, 'Pump')}
-                            ${createPhotoItem(data.panels?.photo || data.panels_photo, 'Panels')} 
-                            ${(data.issues?.photos || data.issue_photos || []).map(url => createPhotoItem(url, 'Issue')).join('')}
+                            ${createPhotoItem(data.controller?.photo || data.controller_photo || (Array.isArray(data.controller?.photos) ? data.controller.photos[0] : null), 'Controller')}
+                            ${createPhotoItem(data.pump?.photo || data.pump_photo || (Array.isArray(data.pump?.photos) ? data.pump.photos[0] : null), 'Pump')}
+                            ${createPhotoItem(data.panels?.photo || data.panels_photo || (Array.isArray(data.panels?.photos) ? data.panels.photos[0] : null), 'Panels')} 
+                            ${(data.issues?.photos || data.issue_photos || (data.issues?.photo ? [data.issues.photo] : [])).map(url => createPhotoItem(url, 'Issue')).join('')}
                         </div>
 
                         <h4 style="margin: 20px 0 10px 0;">Signatures:</h4>
