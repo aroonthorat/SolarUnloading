@@ -6,24 +6,24 @@ class AIInsightsOverview extends StatelessWidget {
   final VoidCallback? onRefresh;
 
   const AIInsightsOverview({
-    Key? key,
+    super.key,
     required this.insights,
     this.onRefresh,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (insights.isEmpty) return SizedBox.shrink();
+    if (insights.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Icon(Icons.auto_awesome, color: Colors.purple.shade600, size: 20),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 "AI List Analysis",
                 style: TextStyle(
@@ -32,15 +32,15 @@ class AIInsightsOverview extends StatelessWidget {
                   color: Colors.purple.shade800,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               if (onRefresh != null)
                 IconButton(
-                  icon: Icon(Icons.refresh, size: 18, color: Colors.grey),
+                  icon: const Icon(Icons.refresh, size: 18, color: Colors.grey),
                   onPressed: onRefresh,
                 ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -84,8 +84,8 @@ class AIInsightsOverview extends StatelessWidget {
 
     return Container(
       width: 260,
-      margin: EdgeInsets.only(right: 12),
-      padding: EdgeInsets.all(12),
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(16),
@@ -94,7 +94,7 @@ class AIInsightsOverview extends StatelessWidget {
           BoxShadow(
             color: Colors.grey.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -105,14 +105,14 @@ class AIInsightsOverview extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(insight.icon, color: fg, size: 16),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   insight.title,
@@ -127,10 +127,10 @@ class AIInsightsOverview extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             insight.description,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: Colors.black87,
               height: 1.4,

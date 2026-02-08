@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for Solar Unloading App
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Allow authenticated users to upload to their specific folders
+    match /uploads/{year}/{month}/{farmerId}/{allPaths=**} {
+      // Allow read for any authenticated user
+      allow read: if request.auth != null;
+      
+      // Allow write (upload) for authenticated users
+      allow write: if request.auth != null;
+    }
+    
+    // Temporary uploads folder (if needed)
+    match /temp/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public folder (if you have any public assets)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Deny all other access by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

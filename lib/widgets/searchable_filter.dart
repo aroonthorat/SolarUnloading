@@ -14,7 +14,7 @@ class SearchableFilter<T> extends StatefulWidget {
   final String? emptyMessage;
 
   const SearchableFilter({
-    Key? key,
+    super.key,
     required this.label,
     required this.items,
     required this.itemLabel,
@@ -24,7 +24,7 @@ class SearchableFilter<T> extends StatefulWidget {
     this.prefixIcon,
     this.allowClear = true,
     this.emptyMessage = 'No items found',
-  }) : super(key: key);
+  });
 
   @override
   State<SearchableFilter<T>> createState() => _SearchableFilterState<T>();
@@ -109,7 +109,7 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
             elevation: 8,
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              constraints: BoxConstraints(maxHeight: 300),
+              constraints: const BoxConstraints(maxHeight: 300),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -137,11 +137,11 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blue, width: 2),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
                         ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                   ),
@@ -161,7 +161,7 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
                           )
                         : ListView.builder(
                             shrinkWrap: true,
-                            padding: EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 4),
                             itemCount: _filteredItems.length,
                             itemBuilder: (context, index) {
                               final item = _filteredItems[index];
@@ -174,7 +174,7 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
                                   _toggleDropdown();
                                 },
                                 child: Container(
-                                  padding: EdgeInsets.symmetric(
+                                  padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 12,
                                   ),
@@ -244,7 +244,7 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
             onTap: _toggleDropdown,
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -257,7 +257,7 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
                         BoxShadow(
                           color: Colors.blue.withOpacity(0.1),
                           blurRadius: 8,
-                          offset: Offset(0, 2),
+                          offset: const Offset(0, 2),
                         )
                       ]
                     : null,
@@ -270,7 +270,7 @@ class _SearchableFilterState<T> extends State<SearchableFilter<T>> {
                       color: Colors.grey.shade600,
                       size: 20,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                   ],
                   Expanded(
                     child: Text(

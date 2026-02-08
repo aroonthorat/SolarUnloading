@@ -33,9 +33,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             elevation: 5,
             useIndicator: true,
             indicatorColor: Colors.deepPurple.shade100,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20.0),
-              child: const Icon(Icons.wb_sunny, color: Colors.deepPurple, size: 32),
+            leading: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20.0),
+              child: Icon(Icons.wb_sunny, color: Colors.deepPurple, size: 32),
             ),
             destinations: const <NavigationRailDestination>[
               NavigationRailDestination(
@@ -271,7 +271,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Card(
             child: SingleChildScrollView(
               child: DataTable(
-                headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+                headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
                 columns: const [
                   DataColumn(label: Text('Select')),
                   DataColumn(label: Text('Farmer Name')),
@@ -287,15 +287,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     selected: isSelected,
                     onSelectChanged: (val) {
                       setState(() {
-                         if(val == true) _selectedStagingIndices.add(index);
-                         else _selectedStagingIndices.remove(index);
+                         if(val == true) {
+                           _selectedStagingIndices.add(index);
+                         } else {
+                           _selectedStagingIndices.remove(index);
+                         }
                       });
                     },
                     cells: [
                       DataCell(Checkbox(value: isSelected, onChanged: (v) {
                          setState(() {
-                           if(v == true) _selectedStagingIndices.add(index);
-                           else _selectedStagingIndices.remove(index);
+                           if(v == true) {
+                             _selectedStagingIndices.add(index);
+                           } else {
+                             _selectedStagingIndices.remove(index);
+                           }
                          });
                       })),
                       DataCell(Text(item['name'])),
@@ -366,8 +372,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
            for(int i=0; i<headerRow.length; i++) {
              String h = _getCellValue(headerRow[i]).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-             if(h.contains('name') || h.contains('farmer') || h.contains('beneficiary')) nameIdx = i;
-             else if(h.contains('location') || h.contains('village') || h.contains('circle') || h.contains('address')) locIdx = i;
+             if(h.contains('name') || h.contains('farmer') || h.contains('beneficiary')) {
+               nameIdx = i;
+             } else if(h.contains('location') || h.contains('village') || h.contains('circle') || h.contains('address')) locIdx = i;
              else if(h.contains('phone') || h.contains('mobile') || h.contains('contact')) phoneIdx = i;
              else if(h.contains('hp') || h.contains('pump') || h.contains('load')) hpIdx = i;
            }

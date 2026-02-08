@@ -207,11 +207,11 @@ class _InstallationLogScreenState extends State<InstallationLogScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.camera_alt, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.camera_alt, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text(
                             'Installation Photos *',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
@@ -243,11 +243,11 @@ class _InstallationLogScreenState extends State<InstallationLogScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.warning_amber, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.warning_amber, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
                             'Issue Photos (Optional)',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,

@@ -4,7 +4,7 @@ import '../services/ai_analysis_service.dart';
 import '../widgets/ai_insights_card.dart';
 
 class FarmerFilterScreen extends StatefulWidget {
-  const FarmerFilterScreen({Key? key}) : super(key: key);
+  const FarmerFilterScreen({super.key});
 
   @override
   State<FarmerFilterScreen> createState() => _FarmerFilterScreenState();
@@ -31,7 +31,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
 
   Future<void> _loadDataAndAnalyze() async {
     // Simmons loading data
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1));
     
     // Create mock data based on the Excel file we analyzed:
     // 187 Accepted, 3 Rejected, 1 Submitted, 9 Vendor Info
@@ -40,16 +40,26 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
     List<FarmerData> mockData = [];
     
     // Add Sambhajinagar farmers (Accepted)
-    for(int i=0; i<100; i++) mockData.add(FarmerData("F$i", "CH. SAMBHAJINAGAR CIRCLE", "JSR OUTCOME ACCEPTED"));
+    for(int i=0; i<100; i++) {
+      mockData.add(FarmerData("F$i", "CH. SAMBHAJINAGAR CIRCLE", "JSR OUTCOME ACCEPTED"));
+    }
     // Add Sambhajinagar (Rejected)
-    for(int i=0; i<4; i++) mockData.add(FarmerData("F$i", "CH. SAMBHAJINAGAR CIRCLE", "JSR OUTCOME REJECTED")); // Anomaly
+    for(int i=0; i<4; i++) {
+      mockData.add(FarmerData("F$i", "CH. SAMBHAJINAGAR CIRCLE", "JSR OUTCOME REJECTED")); // Anomaly
+    }
     
     // Add Jalgaon farmers
-    for(int i=0; i<60; i++) mockData.add(FarmerData("F$i", "JALGAON CIRCLE", "JSR OUTCOME ACCEPTED"));
-    for(int i=0; i<5; i++) mockData.add(FarmerData("F$i", "JALGAON CIRCLE", "VENDOR INFORMATION RECEIVED"));
+    for(int i=0; i<60; i++) {
+      mockData.add(FarmerData("F$i", "JALGAON CIRCLE", "JSR OUTCOME ACCEPTED"));
+    }
+    for(int i=0; i<5; i++) {
+      mockData.add(FarmerData("F$i", "JALGAON CIRCLE", "VENDOR INFORMATION RECEIVED"));
+    }
     
     // Add Jalna
-    for(int i=0; i<20; i++) mockData.add(FarmerData("F$i", "JALNA CIRCLE", "JSR OUTCOME ACCEPTED"));
+    for(int i=0; i<20; i++) {
+      mockData.add(FarmerData("F$i", "JALNA CIRCLE", "JSR OUTCOME ACCEPTED"));
+    }
     mockData.add(FarmerData("F999", "JALGAON CIRCLE", "JSR SUBMITTED")); // Rare one
 
     setState(() {
@@ -67,14 +77,14 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Farmer Filter'),
+        title: const Text('Farmer Filter'),
         backgroundColor: Colors.blue.shade700,
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.analytics_outlined),
+            icon: const Icon(Icons.analytics_outlined),
             onPressed: () {
-               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("AI Analysis re-run completed")));
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("AI Analysis re-run completed")));
                setState(() {
                  aiInsights = AIAnalysisService.analyzeList(allFarmers);
                });
@@ -92,7 +102,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
               Colors.blue.shade700,
               Colors.blue.shade50,
             ],
-            stops: [0.0, 0.3],
+            stops: const [0.0, 0.3],
           ),
         ),
         child: SafeArea(
@@ -100,11 +110,11 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
             children: [
               // Header Section
               Container(
-                padding: EdgeInsets.fromLTRB(20, 10, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Filter Farmers',
                       style: TextStyle(
                         fontSize: 28,
@@ -112,7 +122,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       '${allFarmers.length} Records Loaded',
                       style: TextStyle(
@@ -127,7 +137,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
               // Filter Section
               Expanded(
                 child: Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
@@ -135,14 +145,14 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                     ),
                   ),
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.only(bottom: 24), // Added padding at bottom
+                    padding: const EdgeInsets.only(bottom: 24), // Added padding at bottom
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // AI INSIGHTS SECTION
                         if (isLoadingAnalysis)
-                          Padding(
-                            padding: const EdgeInsets.all(20.0),
+                          const Padding(
+                            padding: EdgeInsets.all(20.0),
                             child: Center(child: CircularProgressIndicator()),
                           )
                         else
@@ -171,7 +181,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                                 allowClear: true,
                               ),
                               
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               
                               // Status Filter
                               SearchableFilter<String>(
@@ -189,12 +199,12 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                                 allowClear: true,
                               ),
                               
-                              SizedBox(height: 32),
+                              const SizedBox(height: 32),
                               
                               // Filter Summary Card
                               if (selectedCircle != null || selectedStatus != null)
                                 Container(
-                                  padding: EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     color: Colors.blue.shade50,
                                     borderRadius: BorderRadius.circular(12),
@@ -209,7 +219,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                                             color: Colors.blue.shade700, 
                                             size: 20
                                           ),
-                                          SizedBox(width: 8),
+                                          const SizedBox(width: 8),
                                           Text(
                                             'Active Filters',
                                             style: TextStyle(
@@ -220,7 +230,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                                           ),
                                         ],
                                       ),
-                                SizedBox(height: 12),
+                                const SizedBox(height: 12),
                                 if (selectedCircle != null)
                                   _buildFilterChip(
                                     'Circle',
@@ -237,7 +247,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                             ),
                           ),
                         
-                        SizedBox(height: 24),
+                        const SizedBox(height: 24),
                         
                         // Action Buttons
                         Row(
@@ -250,10 +260,10 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                                     selectedStatus = null;
                                   });
                                 },
-                                icon: Icon(Icons.clear_all),
-                                label: Text('Clear All'),
+                                icon: const Icon(Icons.clear_all),
+                                label: const Text('Clear All'),
                                 style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
                                   side: BorderSide(color: Colors.grey.shade400),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -261,15 +271,15 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(width: 16),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _applyFilters,
-                                icon: Icon(Icons.search),
-                                label: Text('Apply Filters'),
+                                icon: const Icon(Icons.search),
+                                label: const Text('Apply Filters'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue.shade700,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -297,7 +307,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
         children: [
           Expanded(
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -322,7 +332,7 @@ class _FarmerFilterScreenState extends State<FarmerFilterScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: onRemove,
                     child: Icon(

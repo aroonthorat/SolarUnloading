@@ -40,12 +40,12 @@ class _MyScreenState extends State<MyScreen> {
 // EXAMPLE 1: Simple String Filter
 // ================================
 SearchableFilter<String>(
-  label: 'Circle',
-  items: ['Circle A', 'Circle B', 'Circle C'],
-  selectedItem: selectedCircle,
-  itemLabel: (item) => item,
-  onChanged: (value) => setState(() => selectedCircle = value),
-  prefixIcon: Icons.location_on,
+  label = 'Circle',
+  items = ['Circle A', 'Circle B', 'Circle C'],
+  selectedItem = selectedCircle,
+  itemLabel = (item) => item,
+  onChanged = (value) => setState(() => selectedCircle = value),
+  prefixIcon = Icons.location_on,
 )
 
 // EXAMPLE 2: Custom Object Filter
@@ -57,24 +57,24 @@ class Person {
 }
 
 SearchableFilter<Person>(
-  label: 'Select Person',
-  items: peopleList,
-  selectedItem: selectedPerson,
-  itemLabel: (person) => '${person.name} (${person.age})',
-  onChanged: (person) => setState(() => selectedPerson = person),
-  hintText: 'Search by name...',
-  prefixIcon: Icons.person,
+  label = 'Select Person',
+  items = peopleList,
+  selectedItem = selectedPerson,
+  itemLabel = (person) => '${person.name} (${person.age})',
+  onChanged = (person) => setState(() => selectedPerson = person),
+  hintText = 'Search by name...',
+  prefixIcon = Icons.person,
 )
 
 // EXAMPLE 3: Number Filter
 // =========================
 SearchableFilter<int>(
-  label: 'Year',
-  items: [2020, 2021, 2022, 2023, 2024],
-  selectedItem: selectedYear,
-  itemLabel: (year) => year.toString(),
-  onChanged: (year) => setState(() => selectedYear = year),
-  prefixIcon: Icons.calendar_today,
+  label = 'Year',
+  items = [2020, 2021, 2022, 2023, 2024],
+  selectedItem = selectedYear,
+  itemLabel = (year) => year.toString(),
+  onChanged = (year) => setState(() => selectedYear = year),
+  prefixIcon = Icons.calendar_today,
 )
 
 // EXAMPLE 4: Map/Dictionary Filter
@@ -86,12 +86,12 @@ final Map<String, String> statusMap = {
 };
 
 SearchableFilter<String>(
-  label: 'Status',
-  items: statusMap.keys.toList(),
-  selectedItem: selectedStatus,
-  itemLabel: (key) => statusMap[key]!,
-  onChanged: (key) => setState(() => selectedStatus = key),
-  prefixIcon: Icons.assignment,
+  label = 'Status',
+  items = statusMap.keys.toList(),
+  selectedItem = selectedStatus,
+  itemLabel = (key) => statusMap[key]!,
+  onChanged = (key) => setState(() => selectedStatus = key),
+  prefixIcon = Icons.assignment,
 )
 
 // TIPS:

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Check Installation Database</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Installation Database Checker</h1>
+
+    <button class="btn" onclick="checkDatabase()">🔄 Check Database Now</button>
+
+    <div id="results"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
+            authDomain: "gen-lang-client-0579320558.firebaseapp.com",
+            projectId: "gen-lang-client-0579320558",
+            storageBucket: "gen-lang-client-0579320558.firebasestorage.app",
+            messagingSenderId: "770401014858",
+            appId: "1:770401014858:web:placeholder"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.checkDatabase = async function () {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Checking database...</p>';
+
+            try {
+                // Check installation_records collection
+                const installQuery = query(
+                    collection(db, 'installation_records'),
+                    orderBy('timestamp', 'desc'),
+                    limit(10)
+                );
+
+                const installSnap = await getDocs(installQuery);
+
+                let html = '';
+
+                // Summary
+                html += `<div class="status ${installSnap.empty ? 'error' : 'success'}">`;
+                html += `<h2>📊 Database Status</h2>`;
+                html += `<p><strong>Total Installation Records:</strong> ${installSnap.size}</p>`;
+                html += `<p><strong>Collection:</strong> installation_records</p>`;
+                html += `</div>`;
+
+                if (installSnap.empty) {
+                    html += `<div class="status warning">`;
+                    html += `<h3>⚠️ NO INSTALLATION RECORDS FOUND!</h3>`;
+                    html += `<p>This means installations are NOT being saved to the database.</p>`;
+                    html += `<h4>Possible Causes:</h4>`;
+                    html += `<ul>`;
+                    html += `<li>❌ Firebase Security Rules blocking writes</li>`;
+                    html += `<li>❌ JavaScript error preventing submission</li>`;
+                    html += `<li>❌ Network issue during upload</li>`;
+                    html += `<li>❌ Authentication issue</li>`;
+                    html += `</ul>`;
+                    html += `<h4>Next Steps:</h4>`;
+                    html += `<ol>`;
+                    html += `<li>Open worker-installation.html</li>`;
+                    html += `<li>Complete a test installation</li>`;
+                    html += `<li>Press F12 to open Console</li>`;
+                    html += `<li>Check for RED error messages</li>`;
+                    html += `<li>Screenshot and report any errors</li>`;
+                    html += `</ol>`;
+                    html += `</div>`;
+                } else {
+                    html += `<h3>✅ Found ${installSnap.size} Installation Record(s)</h3>`;
+                    html += `<table>`;
+                    html += `<tr><th>Farmer</th><th>Status</th><th>Date</th><th>Photos</th><th>Panel Photos</th><th>Worker</th></tr>`;
+
+                    installSnap.forEach((doc) => {
+                        const data = doc.data();
+                        const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'N/A';
+                        const photoCount = data.photos ? Object.keys(data.photos).length : 0;
+                        const panelPhotos = data.photos?.panel_photos?.length || 0;
+
+                        html += `<tr>`;
+                        html += `<td>${data.farmer_name || 'Unknown'}</td>`;
+                        html += `<td>${data.installation_status || 'N/A'}</td>`;
+                        html += `<td>${date}</td>`;
+                        html += `<td>${photoCount} fields</td>`;
+                        html += `<td>${panelPhotos} panels</td>`;
+                        html += `<td>${data.worker_email || 'N/A'}</td>`;
+                        html += `</tr>`;
+                    });
+
+                    html += `</table>`;
+
+                    // Show sample data structure
+                    const firstDoc = installSnap.docs[0].data();
+                    html += `<h3>📋 Sample Data Structure</h3>`;
+                    html += `<pre>${JSON.stringify(firstDoc, null, 2)}</pre>`;
+                }
+
+                // Check farmers_master for comparison
+                const farmersSnap = await getDocs(query(collection(db, 'farmers_master'), limit(5)));
+                html += `<div class="status success">`;
+                html += `<p><strong>Farmers Master Records:</strong> ${farmersSnap.size} (showing first 5)</p>`;
+                html += `</div>`;
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="status error">
+                        <h3>❌ Error Checking Database</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            checkDatabase();
+        });
+    </script>
+</body>
+
+</html>

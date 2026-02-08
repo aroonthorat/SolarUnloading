@@ -3,7 +3,7 @@ import 'dart:io';
 
 Future<void> main() async {
   // Key from your firebase_options.dart
-  final apiKey = 'AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88';
+  const apiKey = 'AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88';
   final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey');
 
   print('Testing API Key: $apiKey');
