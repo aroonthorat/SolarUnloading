@@ -640,13 +640,27 @@
 
                         <h4 style="margin: 20px 0 10px 0;">Installation Photos:</h4>
                         <div class="photo-grid">
-                            ${data.installation_photos.map(url => createPhotoItem(url, 'Installation')).join('')}
+                            ${createPhotoItem(data.photos?.farmer_with_system, 'Farmer with System')}
+                            ${createPhotoItem(data.photos?.farmer_with_water_flow, 'Water Flow')}
+                            ${createPhotoItem(data.photos?.farmer_with_pump, 'Pump/Motor')}
+                            ${createPhotoItem(data.photos?.foundation, 'Foundation')}
+                            ${createPhotoItem(data.photos?.earthing_foundation, 'Earthing (L.A)')}
+                            ${createPhotoItem(data.photos?.controller_serial, 'Controller Serial')}
+                            ${createPhotoItem(data.photos?.pump_serial, 'Pump Serial')}
+                            ${createPhotoItem(data.photos?.motor_serial, 'Motor Serial')}
+                            ${createPhotoItem(data.photos?.farmer_aadhar, 'Aadhar Card')}
+                            ${createPhotoItem(data.photos?.extra_1, 'Extra 1')}
+                            ${createPhotoItem(data.photos?.extra_2, 'Extra 2')}
+                            ${data.photos?.panel_photos && data.photos.panel_photos.length > 0 ?
+                            data.photos.panel_photos.map((panel, idx) =>
+                                createPhotoItem(panel.url || panel, `Panel ${panel.index || idx + 1}${panel.serial ? ' - ' + panel.serial : ''}`)
+                            ).join('') : ''}
                         </div>
 
-                        ${data.issue_photos && data.issue_photos.length > 0 ? `
+                        ${data.issues?.photo || (data.photos?.issue_photo) ? `
                             <h4 style="margin: 20px 0 10px 0;">Issue Photos:</h4>
                             <div class="photo-grid">
-                                ${data.issue_photos.map(url => createPhotoItem(url, 'Issue')).join('')}
+                                ${createPhotoItem(data.issues?.photo || data.photos?.issue_photo, 'Issue')}
                             </div>
                         ` : ''}
                     `;
