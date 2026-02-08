@@ -816,8 +816,124 @@
 
         async function loadInstallationReport(farmerId) {
             const el = document.getElementById('installationContent');
-            // Placeholder for now
-            el.innerHTML = '<div style="padding:40px; text-align:center; color:#999; background:#eee; border-radius:10px;">Installation Data Not Linked Yet</div>';
+            el.innerHTML = '<div style="color:#777; padding:20px; text-align:center;">Searching for installation records...</div>';
+
+            try {
+                const q = query(collection(db, 'installation_records'), where('farmer_id', '==', farmerId));
+                const snap = await getDocs(q);
+
+                if (snap.empty) {
+                    el.innerHTML = '<div style="padding:40px; text-align:center; color:#999; background:#eee; border-radius:10px;">No Installation Record Found</div>';
+                    return;
+                }
+
+                const data = snap.docs[0].data(); // Assuming one record per farmer
+
+                // Helper to render photos
+                const renderPhotos = (urls) => {
+                    if (!urls) return '<span style="color:#ccc; font-style:italic;">No photos</span>';
+                    const list = Array.isArray(urls) ? urls : [urls];
+                    if (list.length === 0) return '<span style="color:#ccc; font-style:italic;">No photos</span>';
+                    return list.map(url => `<img src="${url}" class="photo-thumb" onclick="window.open('${url}','_blank')" title="Click to view full size">`).join('');
+                };
+
+                // Helper for safe text
+                const val = (v) => v || '-';
+
+                // Status badge
+                const statusBadge = {
+                    'complete': '<span class="status-badge status-complete">✅ COMPLETE</span>',
+                    'partial': '<span class="status-badge" style="background:#fff3cd; color:#856404;">⚠️ PARTIAL</span>',
+                    'pending_material': '<span class="status-badge" style="background:#d1ecf1; color:#0c5460;">🔧 PENDING MATERIAL</span>'
+                };
+
+                const html = `
+                    <div class="report-section">
+                        <h4 style="margin-top:0; color:#667eea;">🔧 Installation Details</h4>
+                        <div class="report-grid">
+                            <div><span class="report-label">Status:</span> ${statusBadge[data.installation_status] || data.installation_status}</div>
+                            <div><span class="report-label">Date:</span> ${data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : '-'}</div>
+                            <div><span class="report-label">Installed By:</span> ${data.installed_by_name || data.worker_email || '-'}</div>
+                            <div><span class="report-label">Location:</span> ${data.location ? `${data.location.lat.toFixed(4)}, ${data.location.lon.toFixed(4)}` : '-'}</div>
+                            <div><span class="report-label">Panel Count:</span> ${data.panel_count || data.photos?.panel_photos?.length || '-'}</div>
+                            <div><span class="report-label">Panels with Photos:</span> ${data.photos?.panel_photos?.length || '0'}</div>
+                        </div>
+                    </div>
+
+                    <div class="report-section">
+                        <span class="report-label">📝 Notes/Issues:</span>
+                        <p style="background:white; padding:10px; border:1px solid #eee; margin-top:5px; border-radius:5px;">${data.issues?.notes || 'No notes provided.'}</p>
+                        ${data.issues?.material_short ? `<p style="background:#fff3cd; padding:10px; border:1px solid #ffeeba; margin-top:5px; border-radius:5px; color:#856404;">⚠️ <strong>Material Shortage</strong></p>` : ''}
+                        ${data.issues?.photo ? `<div class="photo-grid"><img src="${data.issues.photo}" class="photo-thumb" onclick="window.open('${data.issues.photo}','_blank')" title="Issue Photo"></div>` : ''}
+                    </div>
+
+                    <div class="report-section">
+                        <h4 style="margin-top:0;">📸 Installation Photos</h4>
+                        
+                        <div style="margin-bottom:20px;">
+                            <div class="report-label" style="margin-bottom:8px; font-size:14px;">🌞 System & Farmer Photos</div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;">
+                                ${data.photos?.farmer_with_system ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">System</div><img src="${data.photos.farmer_with_system}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.farmer_with_system}','_blank')"></div>` : ''}
+                                ${data.photos?.farmer_with_water_flow ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Water Flow</div><img src="${data.photos.farmer_with_water_flow}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.farmer_with_water_flow}','_blank')"></div>` : ''}
+                                ${data.photos?.farmer_with_pump ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Pump/Motor</div><img src="${data.photos.farmer_with_pump}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.farmer_with_pump}','_blank')"></div>` : ''}
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:20px;">
+                            <div class="report-label" style="margin-bottom:8px; font-size:14px;">🏗️ Foundation & Earthing</div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;">
+                                ${data.photos?.foundation ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Foundation</div><img src="${data.photos.foundation}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.foundation}','_blank')"></div>` : ''}
+                                ${data.photos?.earthing_foundation ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Earthing (L.A)</div><img src="${data.photos.earthing_foundation}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.earthing_foundation}','_blank')"></div>` : ''}
+                            </div>
+                        </div>
+
+                        ${data.photos?.panel_photos && data.photos.panel_photos.length > 0 ? `
+                        <div style="margin-bottom:20px;">
+                            <div class="report-label" style="margin-bottom:8px; font-size:14px;">☀️ Solar Panels (${data.photos.panel_photos.length})</div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;">
+                                ${data.photos.panel_photos.map(panel => `
+                                    <div>
+                                        <div style="font-size:11px; color:#666; margin-bottom:3px;">Panel ${panel.index}${panel.serial ? ` - ${panel.serial}` : ''}</div>
+                                        <img src="${panel.url}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${panel.url}','_blank')" title="Panel ${panel.index}">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : '<div style="padding:20px; background:#fff3cd; border-radius:8px; text-align:center; margin-bottom:20px; color:#856404;">⚠️ No panel photos available</div>'}
+
+                        <div style="margin-bottom:20px;">
+                            <div class="report-label" style="margin-bottom:8px; font-size:14px;">🔢 Serial Numbers</div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;">
+                                ${data.photos?.controller_serial ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Controller</div><img src="${data.photos.controller_serial}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.controller_serial}','_blank')"></div>` : ''}
+                                ${data.photos?.pump_serial ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Pump</div><img src="${data.photos.pump_serial}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.pump_serial}','_blank')"></div>` : ''}
+                                ${data.photos?.motor_serial ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Motor</div><img src="${data.photos.motor_serial}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.motor_serial}','_blank')"></div>` : ''}
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:20px;">
+                            <div class="report-label" style="margin-bottom:8px; font-size:14px;">📄 Documentation</div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;">
+                                ${data.photos?.farmer_aadhar ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Aadhar Card</div><img src="${data.photos.farmer_aadhar}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.farmer_aadhar}','_blank')"></div>` : ''}
+                                ${data.photos?.extra_1 ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Extra 1</div><img src="${data.photos.extra_1}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.extra_1}','_blank')"></div>` : ''}
+                                ${data.photos?.extra_2 ? `<div><div style="font-size:11px; color:#666; margin-bottom:3px;">Extra 2</div><img src="${data.photos.extra_2}" class="photo-thumb" style="width:100%; height:100px;" onclick="window.open('${data.photos.extra_2}','_blank')"></div>` : ''}
+                            </div>
+                        </div>
+
+                        ${data.signature_worker ? `
+                        <div>
+                            <div class="report-label" style="margin-bottom:8px; font-size:14px;">✍️ Worker Signature</div>
+                            <img src="${data.signature_worker}" style="max-width:300px; border:1px solid #ddd; border-radius:8px; background:white; padding:10px;">
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                el.innerHTML = html;
+
+            } catch (e) {
+                console.error('Error loading installation report:', e);
+                el.innerHTML = `<div style="padding:20px; background:#f8d7da; color:#721c24; border-radius:10px;">❌ Error loading installation report: ${e.message}</div>`;
+            }
         }
 
         window.saveEdit = async () => {
