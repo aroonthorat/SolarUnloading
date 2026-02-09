@@ -938,6 +938,14 @@
 
         window.saveEdit = async () => {
             const id = document.getElementById('editId').value;
+
+            // Validate ID exists
+            if (!id || id.trim() === '') {
+                alert('❌ Error: No farmer ID found. Please close and reopen the edit dialog.');
+                console.error('Missing farmer ID in edit form');
+                return;
+            }
+
             const newData = {
                 BENEFICIARY_NAME: document.getElementById('editName').value,
                 name: document.getElementById('editName').value,
@@ -953,6 +961,7 @@
             btn.disabled = true;
 
             try {
+                console.log('Updating farmer with ID:', id);
                 await updateDoc(doc(db, 'farmers_master', id), newData);
 
                 // Update local data
@@ -966,7 +975,7 @@
                 alert('Profile updated successfully!');
 
             } catch (e) {
-                console.error(e);
+                console.error('Update error:', e);
                 alert('Error updating: ' + e.message);
             } finally {
                 btn.innerHTML = "💾 Save Changes";

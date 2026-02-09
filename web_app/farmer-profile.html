@@ -447,6 +447,11 @@
             btn.textContent = "Saving...";
 
             try {
+                // Validate farmer ID exists
+                if (!currentFarmerId || currentFarmerId.trim() === '') {
+                    throw new Error('No farmer ID found. Please return to dashboard and try again.');
+                }
+
                 const newData = {
                     name: document.getElementById('edit_name').value,
                     phone: document.getElementById('edit_mobile').value,
@@ -456,6 +461,7 @@
                 };
 
                 // Update Firestore
+                console.log('Updating farmer ID:', currentFarmerId);
                 await updateDoc(doc(db, 'farmers_master', currentFarmerId), newData);
 
                 // Update Session
