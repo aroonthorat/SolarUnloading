@@ -178,69 +178,35 @@
         </div>
 
         <div class="controls">
-            <h3>🎯 Select QR Type</h3>
+            <h3>📦 Material QR Code Generator</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
+                Recreate QR codes for all scanned equipment serial numbers from unloading records
+            </p>
 
-            <label style="display: block; padding: 10px; background: #f0f0f0; margin: 5px 0; border-radius: 5px;">
-                <input type="radio" name="qrType" value="farmers" checked onchange="updateQRType()">
-                <strong>Farmer Profiles</strong> - Generate QR codes for farmer profiles
-            </label>
-
-            <label
-                style="display: block; padding: 10px; background: #fff3cd; margin: 5px 0; border-radius: 5px; border: 2px solid #ffc107;">
-                <input type="radio" name="qrType" value="equipment" onchange="updateQRType()">
-                <strong>📦 Scanned Serial Numbers</strong> - Recreate QR codes for ALL serial numbers you already
-                scanned during unloading
-                <br><small style="color: #666; margin-left: 25px;">☑ Controllers • Pumps • Panels • Motors</small>
-            </label>
-
-            <div id="farmerOptions" style="margin-top: 15px;">
-                <h4>👥 Farmer Selection</h4>
-                <label>
-                    <input type="radio" name="selection" value="all" checked onchange="updateSelection()">
-                    Generate for ALL farmers
-                </label>
-                <br>
-                <label>
-                    <input type="radio" name="selection" value="range" onchange="updateSelection()">
-                    Generate for range:
-                    <input type="number" id="rangeStart" min="1" value="1" style="width: 80px;">
-                    to
-                    <input type="number" id="rangeEnd" min="1" value="10" style="width: 80px;">
-                </label>
-                <br>
-                <label>
-                    <input type="radio" name="selection" value="status" onchange="updateSelection()">
-                    Filter by status:
-                    <select id="statusFilter">
-                        <option value="pending">Pending Unloading</option>
-                        <option value="done">Unloading Done</option>
-                        <option value="all">All Status</option>
-                    </select>
-                </label>
-            </div>
 
             <div id="equipmentOptions"
-                style="margin-top: 15px; display: none; background: #fffbf0; padding: 15px; border-radius: 8px; border: 1px solid #ffc107;">
-                <h4>⚙️ Select Which Serial Numbers to Recreate</h4>
-                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">These are the serial numbers you scanned
-                    during unloading process:</p>
+                style="margin-top: 15px; background: #fffbf0; padding: 15px; border-radius: 8px; border: 1px solid #ffc107;">
+                <h4>⚙️ Select Which Materials to Generate QR Codes For</h4>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Select the equipment types you want to
+                    create QR codes for:</p>
                 <label style="display: block; padding: 8px; margin: 5px 0;">
-                    <input type="checkbox" id="includeControllers" checked> <strong>Controller Serial Numbers</strong>
-                    (from controller_qr field)
+                    <input type="checkbox" id="includeControllers" checked> <strong>Controllers</strong>
+                    (controller_qr field from unloading records)
                 </label>
                 <label style="display: block; padding: 8px; margin: 5px 0;">
-                    <input type="checkbox" id="includePumps" checked> <strong>Pump Serial Numbers</strong> (from pump_qr
+                    <input type="checkbox" id="includePumps" checked> <strong>Pumps</strong> (pump_qr
                     field)
                 </label>
                 <label style="display: block; padding: 8px; margin: 5px 0;">
-                    <input type="checkbox" id="includePanels" checked> <strong>Panel Serial Numbers</strong> (from
-                    panel_serials array)
+                    <input type="checkbox" id="includePanels" checked> <strong>Solar Panels</strong> (panel_serials
+                    array)
                 </label>
                 <label style="display: block; padding: 8px; margin: 5px 0;">
-                    <input type="checkbox" id="includeMotors" checked> <strong>Motor Serial Numbers</strong> (from
-                    motor_serial field)
+                    <input type="checkbox" id="includeMotors" checked> <strong>Motors</strong> (motor_serial
+                    field)
                 </label>
             </div>
+
 
             <br>
 
@@ -297,86 +263,38 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let allFarmers = [];
+        let allEquipment = [];
         let generatedQRs = [];
 
-        // Load farmers on page load
-        async function loadFarmers() {
-            try {
-                const q = query(collection(db, 'farmers_master'), orderBy('name'));
-                const snapshot = await getDocs(q);
-
-                allFarmers = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-
-                document.getElementById('totalFarmers').textContent = allFarmers.length;
-                updateSelection();
-            } catch (error) {
-                console.error('Error loading farmers:', error);
-                alert('Error loading farmers: ' + error.message);
-            }
-        }
-
-        window.updateSelection = () => {
-            const selection = document.querySelector('input[name="selection"]:checked').value;
-            let count = 0;
-
-            if (selection === 'all') {
-                count = allFarmers.length;
-            } else if (selection === 'range') {
-                const start = parseInt(document.getElementById('rangeStart').value);
-                const end = parseInt(document.getElementById('rangeEnd').value);
-                count = Math.min(end, allFarmers.length) - start + 1;
-            } else if (selection === 'status') {
-                const status = document.getElementById('statusFilter').value;
-                if (status === 'all') {
-                    count = allFarmers.length;
-                } else {
-                    count = allFarmers.filter(f => f.unloading_status === status).length;
-                }
-            }
-
-            document.getElementById('selectedCount').textContent = Math.max(0, count);
-        };
-
-        window.updateQRType = () => {
-            const qrType = document.querySelector('input[name="qrType"]:checked').value;
-            const farmerOptions = document.getElementById('farmerOptions');
-            const equipmentOptions = document.getElementById('equipmentOptions');
-
-            if (qrType === 'farmers') {
-                farmerOptions.style.display = 'block';
-                equipmentOptions.style.display = 'none';
-                updateSelection();
-            } else {
-                farmerOptions.style.display = 'none';
-                equipmentOptions.style.display = 'block';
-                loadEquipmentCount();
-            }
-        };
-
-        async function loadEquipmentCount() {
+        // Load equipment from unloading records
+        async function loadEquipment() {
             try {
                 const snapshot = await getDocs(collection(db, 'unloading_records'));
-                let count = 0;
+
+                let totalItems = 0;
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (document.getElementById('includeControllers').checked && data.controller_qr) count++;
-                    if (document.getElementById('includePumps').checked && data.pump_qr) count++;
-                    if (document.getElementById('includeMotors').checked && data.motor_serial) count++;
-                    if (document.getElementById('includePanels').checked && data.panel_serials) {
-                        count += data.panel_serials.filter(p => p).length;
-                    }
+
+                    if (data.controller_qr) totalItems++;
+                    if (data.pump_qr) totalItems++;
+                    if (data.motor_serial) totalItems++;
+                    if (data.panel_serials) totalItems += data.panel_serials.filter(p => p).length;
                 });
 
-                document.getElementById('selectedCount').textContent = count;
+                document.getElementById('totalFarmers').textContent = snapshot.size;
+                document.getElementById('selectedCount').textContent = totalItems;
             } catch (error) {
-                console.error('Error loading equipment count:', error);
+                console.error('Error loading equipment:', error);
+                alert('Error loading equipment: ' + error.message);
             }
         }
+
+        // Generate QR codes for equipment
+        window.generateQRCodes = async function () {
+            await generateEquipmentQRs();
+        };
+
 
         async function generateEquipmentQRs() {
             const previewContainer = document.getElementById('previewContainer');
@@ -666,7 +584,7 @@
         };
 
         // Initialize
-        loadFarmers();
+        loadEquipment();
     </script>
 </body>
 
