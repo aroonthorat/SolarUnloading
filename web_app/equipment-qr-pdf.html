@@ -332,6 +332,59 @@
                     header.textContent = `👤 ${farmer.name} - ${farmer.equipment.length} Item(s)`;
                     section.appendChild(header);
 
+                    // Create MASTER QR CODE for this farmer (contains ALL equipment)
+                    const masterQRContainer = document.createElement('div');
+                    masterQRContainer.style.cssText = `
+                        text-align: center;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border-radius: 10px;
+                        margin-bottom: 20px;
+                    `;
+
+                    const masterLabel = document.createElement('div');
+                    masterLabel.style.cssText = 'color: white; font-weight: bold; font-size: 16px; margin-bottom: 10px;';
+                    masterLabel.textContent = '📋 MASTER QR - ALL EQUIPMENT';
+                    masterQRContainer.appendChild(masterLabel);
+
+                    const masterQRDiv = document.createElement('div');
+                    masterQRDiv.style.cssText = 'display: inline-block; background: white; padding: 15px; border-radius: 8px;';
+
+                    // Create master QR data with ALL equipment
+                    const masterData = {
+                        farmer_id: farmer.id,
+                        farmer_name: farmer.name,
+                        total_items: farmer.equipment.length,
+                        equipment: farmer.equipment.map(item => ({
+                            type: item.type,
+                            serial: item.serial
+                        }))
+                    };
+
+                    new QRCode(masterQRDiv, {
+                        text: JSON.stringify(masterData),
+                        width: 200,
+                        height: 200,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    masterQRContainer.appendChild(masterQRDiv);
+
+                    const masterNote = document.createElement('div');
+                    masterNote.style.cssText = 'color: white; font-size: 12px; margin-top: 10px; opacity: 0.9;';
+                    masterNote.textContent = 'Scan this to get all equipment data for this farmer';
+                    masterQRContainer.appendChild(masterNote);
+
+                    section.appendChild(masterQRContainer);
+
+                    // Individual equipment QR codes
+                    const individualLabel = document.createElement('div');
+                    individualLabel.style.cssText = 'font-weight: bold; color: #666; margin: 20px 0 10px 0; font-size: 14px;';
+                    individualLabel.textContent = '🔧 Individual Equipment QR Codes:';
+                    section.appendChild(individualLabel);
+
                     const grid = document.createElement('div');
                     grid.className = 'equipment-grid';
 
@@ -419,22 +472,52 @@
                     doc.setDrawColor(200);
                     doc.line(margin, margin + 10, pageWidth - margin, margin + 10);
 
-                    // Layout QR codes
-                    const qrSize = 60;
+                    // Add MASTER QR CODE (centered, larger)
+                    const farmerSections = document.querySelectorAll('.farmer-section');
+                    const farmerIndex = farmerEquipmentData.indexOf(farmer);
+                    const masterQRCanvas = farmerSections[farmerIndex].querySelector('div[style*="linear-gradient"] canvas');
+
+                    if (masterQRCanvas) {
+                        const masterQRSize = 70;
+                        const masterQRX = (pageWidth - masterQRSize) / 2;
+                        const masterQRY = margin + 20;
+
+                        const masterImgData = masterQRCanvas.toDataURL('image/png');
+                        doc.addImage(masterImgData, 'PNG', masterQRX, masterQRY, masterQRSize, masterQRSize);
+
+                        // Master QR label
+                        doc.setFontSize(12);
+                        doc.setTextColor(102, 126, 234);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('MASTER QR - ALL EQUIPMENT', pageWidth / 2, masterQRY + masterQRSize + 6, { align: 'center' });
+
+                        doc.setFontSize(8);
+                        doc.setTextColor(100);
+                        doc.setFont(undefined, 'normal');
+                        doc.text('Scan to get complete equipment list', pageWidth / 2, masterQRY + masterQRSize + 11, { align: 'center' });
+                    }
+
+                    // Individual equipment section header
+                    const individualHeaderY = margin + 115;
+                    doc.setFontSize(11);
+                    doc.setTextColor(80);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Individual Equipment QR Codes:', margin, individualHeaderY);
+
+                    // Layout individual equipment QR codes
+                    const qrSize = 50;
                     const cols = 2;
                     const gap = 10;
-                    const startY = margin + 20;
+                    const startY = individualHeaderY + 10;
 
                     farmer.equipment.forEach((item, index) => {
                         const col = index % cols;
                         const row = Math.floor(index / cols);
 
-                        const x = margin + (col * (qrSize + gap + 30));
-                        const y = startY + (row * (qrSize + gap + 20));
+                        const x = margin + (col * (qrSize + gap + 40));
+                        const y = startY + (row * (qrSize + gap + 18));
 
-                        // Get QR canvas
-                        const farmerSections = document.querySelectorAll('.farmer-section');
-                        const farmerIndex = farmerEquipmentData.indexOf(farmer);
+                        // Get individual QR canvas
                         const qrItems = farmerSections[farmerIndex].querySelectorAll('.qr-item canvas');
                         const canvas = qrItems[index];
 
@@ -443,13 +526,13 @@
                             doc.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
 
                             // Add labels
-                            doc.setFontSize(10);
+                            doc.setFontSize(9);
                             doc.setFont(undefined, 'bold');
                             doc.text(item.type, x + qrSize / 2, y + qrSize + 5, { align: 'center', maxWidth: qrSize });
 
-                            doc.setFontSize(8);
+                            doc.setFontSize(7);
                             doc.setFont(undefined, 'normal');
-                            doc.text(item.serial, x + qrSize / 2, y + qrSize + 10, { align: 'center', maxWidth: qrSize });
+                            doc.text(item.serial, x + qrSize / 2, y + qrSize + 9, { align: 'center', maxWidth: qrSize });
                         }
                     });
 
