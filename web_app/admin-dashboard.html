@@ -418,6 +418,9 @@
                     <button id="btnExport" class="btn"
                         style="background:#4caf50; color:white; padding:10px 15px; font-weight:bold; white-space:nowrap;"
                         onclick="exportToExcel()">📊 Export Excel</button>
+                    <button class="btn"
+                        style="background:#667eea; color:white; padding:10px 15px; font-weight:bold; white-space:nowrap;"
+                        onclick="window.open('farmer-qr-generator.html', '_blank')">📱 Generate QR Codes</button>
                 </div>
                 <div id="farmersList"></div>
             </div>
@@ -702,6 +705,7 @@
                         <span class="status-badge status-${f.unloading_status === 'done' ? 'complete' : 'pending'}">${f.unloading_status.toUpperCase()}</span>
                         <div>
                             <button class="action-btn" onclick="window.viewFarmer('${f.id}')" style="background:#e3f2fd; color:#1976d2; border:1px solid #bbdefb; margin-right:5px;" title="View Full Details">👁️ View</button>
+                            <button class="action-btn" onclick="window.generateSingleFarmerQR('${f.id}', '${f.name.replace(/'/g, "\\'")}')" style="background:#f3e5f5; color:#7b1fa2; border:1px solid #ce93d8; margin-right:5px;" title="Generate QR Code">📱</button>
                             <button class="action-btn btn-edit" onclick="window.editFarmer('${f.id}')">✏️</button>
                             <button class="action-btn btn-delete" onclick="window.deleteFarmer('${f.id}')">🗑️</button>
                         </div>
@@ -1546,6 +1550,100 @@
             sessionStorage.setItem('viewingFarmer', JSON.stringify(f));
             window.location.href = 'farmer-profile.html';
         };
+
+        // Generate QR code for single farmer and download as image
+        window.generateSingleFarmerQR = async (farmerId, farmerName) => {
+            try {
+                // Create modal overlay
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.8); z-index: 10000;
+                    display: flex; align-items: center; justify-content: center;
+                `;
+
+                const content = document.createElement('div');
+                content.style.cssText = `
+                    background: white; padding: 30px; border-radius: 15px;
+                    text-align: center; max-width: 400px;
+                `;
+                content.innerHTML = `
+                    <h3 style="margin-bottom: 20px; color: #667eea;">📱 Farmer QR Code</h3>
+                    <p style="margin-bottom: 15px;">${farmerName}</p>
+                    <div id="qrContainer" style="display: inline-block; padding: 20px; background: white;"></div>
+                    <br><br>
+                    <button onclick="downloadQR()" style="background:#667eea; color:white; padding:12px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer; margin-right:10px;">💾 Download QR</button>
+                    <button onclick="printQR()" style="background:#4caf50; color:white; padding:12px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer; margin-right:10px;">🖨️ Print</button>
+                    <button onclick="this.closest('div[style*=\"fixed\"]').remove()" style="background:#f44336; color:white; padding:12px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer;">✖️ Close</button>
+                `;
+
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+
+                // Load QRCode library if not loaded
+                if (typeof QRCode === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+                    await new Promise((resolve) => {
+                        script.onload = resolve;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                // Get farmer data
+                const farmer = window.allFarmersData.find(f => f.id === farmerId);
+                const qrData = JSON.stringify({
+                    id: farmer.id,
+                    name: farmer.name,
+                    phone: farmer.phone,
+                    location: farmer.location,
+                    hp: farmer.hp,
+                    type: 'farmer_profile'
+                });
+
+                // Generate QR
+                const qr = new QRCode(document.getElementById('qrContainer'), {
+                    text: qrData,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                // Download function
+                window.downloadQR = () => {
+                    const canvas = document.querySelector('#qrContainer canvas');
+                    const url = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `QR_${farmerName.replace(/\s+/g, '_')}.png`;
+                    a.click();
+                };
+
+                // Print function
+                window.printQR = () => {
+                    const canvas = document.querySelector('#qrContainer canvas');
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                        <head><title>Print QR Code - ${farmerName}</title></head>
+                        <body style="text-align:center; padding:20px;">
+                            <h2>${farmerName}</h2>
+                            <img src="${canvas.toDataURL('image/png')}" style="max-width:300px;">
+                            <script>window.onload = () => { window.print(); }<\/script>
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                };
+
+            } catch (error) {
+                console.error('QR Generation Error:', error);
+                alert('Error generating QR code: ' + error.message);
+            }
+        };
+
 
 
 
