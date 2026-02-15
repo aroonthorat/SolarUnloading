@@ -265,6 +265,20 @@
 
         let allEquipment = [];
         let generatedQRs = [];
+        let currentUser = null;
+
+        // Check auth state
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                console.log('User authenticated:', user.email);
+                loadEquipment();
+            } else {
+                currentUser = null;
+                alert('Please log in to use this tool');
+                window.location.href = 'index.html';
+            }
+        });
 
         // Load equipment from unloading records
         async function loadEquipment() {
@@ -292,7 +306,28 @@
 
         // Generate QR codes for equipment
         window.generateQRCodes = async function () {
-            await generateEquipmentQRs();
+            if (!currentUser) {
+                alert('Please log in first');
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+
+            try {
+                await generateEquipmentQRs();
+                btn.textContent = '✅ Generated!';
+                setTimeout(() => {
+                    btn.textContent = '📱 Generate QR Codes';
+                    btn.disabled = false;
+                }, 2000);
+            } catch (error) {
+                console.error('Generation error:', error);
+                alert('Error: ' + error.message);
+                btn.textContent = '📱 Generate QR Codes';
+                btn.disabled = false;
+            }
         };
 
 
@@ -583,8 +618,8 @@
             }
         };
 
-        // Initialize
-        loadEquipment();
+        // Initialize - auth handler will call loadEquipment when user is authenticated
+
     </script>
 </body>
 
