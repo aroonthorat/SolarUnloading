@@ -311,14 +311,23 @@
                 const farmer = farmersData.find(f => f.id === farmerId);
                 const farmerName = farmer ? farmer.name : 'Unknown';
 
-                // Load unloading records for this farmer
-                const q = query(collection(db, 'unloading_records'), where('farmer_id', '==', farmerId));
-                const snapshot = await getDocs(q);
+                // Load unloading records - try matching by both farmer_id AND farmer_name
+                // Some records might use farmer_id, others might use farmer_name
+                const snapshot = await getDocs(collection(db, 'unloading_records'));
 
                 currentEquipment = [];
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
+
+                    // Check if this record belongs to the selected farmer
+                    // Match by farmer_id OR farmer_name
+                    const belongsToFarmer =
+                        data.farmer_id === farmerId ||
+                        data.farmer_name === farmerName ||
+                        data.farmer_name === farmer?.name;
+
+                    if (!belongsToFarmer) return;
 
                     if (data.controller_qr) {
                         currentEquipment.push({
