@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Equipment QR Code PDF Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .preview-area {
+            margin-top: 30px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 10px;
+            min-height: 200px;
+        }
+
+        .farmer-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .farmer-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .qr-item {
+            text-align: center;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .qr-item canvas {
+            margin-bottom: 10px;
+        }
+
+        .qr-label {
+            font-weight: 600;
+            color: #333;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .qr-serial {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            flex: 1;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #667eea;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📦 Equipment Serial Number QR PDF Generator</h1>
+        <p class="subtitle">
+            Recreate QR codes from all scanned serial numbers during unloading<br>
+            <strong>Each farmer gets their own page with all their equipment QR codes</strong>
+        </p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalFarmers">0</div>
+                <div class="stat-label">Farmers with Unloading</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalQRs">0</div>
+                <div class="stat-label">Total QR Codes</div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn btn-primary" onclick="generateAllQRs()" id="generateBtn">
+                📱 Generate All Equipment QR Codes
+            </button>
+            <button class="btn btn-success" onclick="downloadPDF()" id="downloadBtn" disabled>
+                📄 Download PDF (One Page Per Farmer)
+            </button>
+        </div>
+
+        <div class="preview-area" id="previewArea">
+            <div class="loading">Click "Generate All Equipment QR Codes" to start</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
+            authDomain: "gen-lang-client-0579320558.firebaseapp.com",
+            projectId: "gen-lang-client-0579320558",
+            storageBucket: "gen-lang-client-0579320558.firebasestorage.app",
+            messagingSenderId: "770401014858",
+            appId: "1:770401014858:web:placeholder"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let farmerEquipmentData = [];
+
+        window.generateAllQRs = async () => {
+            const previewArea = document.getElementById('previewArea');
+            const generateBtn = document.getElementById('generateBtn');
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Loading...';
+            previewArea.innerHTML = '<div class="loading">⏳ Loading unloading records from database...</div>';
+
+            try {
+                // Load unloading records
+                const snapshot = await getDocs(collection(db, 'unloading_records'));
+
+                if (snapshot.empty) {
+                    previewArea.innerHTML = '<div class="loading">❌ No unloading records found!</div>';
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = '📱 Generate All Equipment QR Codes';
+                    return;
+                }
+
+                // Group by farmer
+                const farmerMap = {};
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const farmerId = data.farmer_id || doc.id;
+                    const farmerName = data.farmer_name || 'Unknown Farmer';
+
+                    if (!farmerMap[farmerId]) {
+                        farmerMap[farmerId] = {
+                            id: farmerId,
+                            name: farmerName,
+                            equipment: []
+                        };
+                    }
+
+                    // Add controller
+                    if (data.controller_qr) {
+                        farmerMap[farmerId].equipment.push({
+                            type: 'Controller',
+                            serial: data.controller_qr
+                        });
+                    }
+
+                    // Add pump
+                    if (data.pump_qr) {
+                        farmerMap[farmerId].equipment.push({
+                            type: 'Pump',
+                            serial: data.pump_qr
+                        });
+                    }
+
+                    // Add motor
+                    if (data.motor_serial) {
+                        farmerMap[farmerId].equipment.push({
+                            type: 'Motor',
+                            serial: data.motor_serial
+                        });
+                    }
+
+                    // Add panels
+                    if (data.panel_serials && Array.isArray(data.panel_serials)) {
+                        data.panel_serials.forEach((serial, index) => {
+                            if (serial) {
+                                farmerMap[farmerId].equipment.push({
+                                    type: `Panel #${index + 1}`,
+                                    serial: serial
+                                });
+                            }
+                        });
+                    }
+                });
+
+                // Convert to array and filter out farmers with no equipment
+                farmerEquipmentData = Object.values(farmerMap).filter(f => f.equipment.length > 0);
+
+                document.getElementById('totalFarmers').textContent = farmerEquipmentData.length;
+
+                let totalQRs = 0;
+                farmerEquipmentData.forEach(f => totalQRs += f.equipment.length);
+                document.getElementById('totalQRs').textContent = totalQRs;
+
+                // Generate preview
+                previewArea.innerHTML = '';
+
+                for (const farmer of farmerEquipmentData) {
+                    // Create farmer section
+                    const section = document.createElement('div');
+                    section.className = 'farmer-section';
+
+                    const header = document.createElement('div');
+                    header.className = 'farmer-header';
+                    header.textContent = `👤 ${farmer.name} - ${farmer.equipment.length} Item(s)`;
+                    section.appendChild(header);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'equipment-grid';
+
+                    // Generate QR for each equipment
+                    for (const item of farmer.equipment) {
+                        const qrItem = document.createElement('div');
+                        qrItem.className = 'qr-item';
+
+                        const qrContainer = document.createElement('div');
+                        qrContainer.style.display = 'inline-block';
+
+                        new QRCode(qrContainer, {
+                            text: item.serial,
+                            width: 150,
+                            height: 150,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+
+                        qrItem.appendChild(qrContainer);
+
+                        const label = document.createElement('div');
+                        label.className = 'qr-label';
+                        label.textContent = item.type;
+                        qrItem.appendChild(label);
+
+                        const serial = document.createElement('div');
+                        serial.className = 'qr-serial';
+                        serial.textContent = item.serial;
+                        qrItem.appendChild(serial);
+
+                        grid.appendChild(qrItem);
+                    }
+
+                    section.appendChild(grid);
+                    previewArea.appendChild(section);
+                }
+
+                document.getElementById('downloadBtn').disabled = false;
+                generateBtn.textContent = '✅ Generated! (Click again to refresh)';
+                generateBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error:', error);
+                previewArea.innerHTML = `<div class="loading">❌ Error: ${error.message}</div>`;
+                generateBtn.disabled = false;
+                generateBtn.textContent = '📱 Generate All Equipment QR Codes';
+            }
+        };
+
+        window.downloadPDF = async () => {
+            const btn = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating PDF...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('portrait', 'mm', 'a4');
+
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const margin = 15;
+
+                let isFirstPage = true;
+
+                for (const farmer of farmerEquipmentData) {
+                    if (!isFirstPage) {
+                        doc.addPage();
+                    }
+                    isFirstPage = false;
+
+                    // Farmer name header
+                    doc.setFontSize(16);
+                    doc.setTextColor(102, 126, 234);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(farmer.name, pageWidth / 2, margin, { align: 'center' });
+
+                    doc.setFontSize(10);
+                    doc.setTextColor(100);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(`${farmer.equipment.length} Equipment Item(s)`, pageWidth / 2, margin + 7, { align: 'center' });
+
+                    // Draw line
+                    doc.setDrawColor(200);
+                    doc.line(margin, margin + 10, pageWidth - margin, margin + 10);
+
+                    // Layout QR codes
+                    const qrSize = 60;
+                    const cols = 2;
+                    const gap = 10;
+                    const startY = margin + 20;
+
+                    farmer.equipment.forEach((item, index) => {
+                        const col = index % cols;
+                        const row = Math.floor(index / cols);
+
+                        const x = margin + (col * (qrSize + gap + 30));
+                        const y = startY + (row * (qrSize + gap + 20));
+
+                        // Get QR canvas
+                        const farmerSections = document.querySelectorAll('.farmer-section');
+                        const farmerIndex = farmerEquipmentData.indexOf(farmer);
+                        const qrItems = farmerSections[farmerIndex].querySelectorAll('.qr-item canvas');
+                        const canvas = qrItems[index];
+
+                        if (canvas) {
+                            const imgData = canvas.toDataURL('image/png');
+                            doc.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+
+                            // Add labels
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text(item.type, x + qrSize / 2, y + qrSize + 5, { align: 'center', maxWidth: qrSize });
+
+                            doc.setFontSize(8);
+                            doc.setFont(undefined, 'normal');
+                            doc.text(item.serial, x + qrSize / 2, y + qrSize + 10, { align: 'center', maxWidth: qrSize });
+                        }
+                    });
+
+                    // Footer
+                    doc.setFontSize(8);
+                    doc.setTextColor(150);
+                    doc.text(`Solar Unloading System - ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
+                    doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+                }
+
+                // Save
+                doc.save(`Equipment_QR_Codes_${new Date().toISOString().split('T')[0]}.pdf`);
+
+                btn.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    btn.textContent = '📄 Download PDF (One Page Per Farmer)';
+                    btn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('PDF Error:', error);
+                alert('Error generating PDF: ' + error.message);
+                btn.textContent = '📄 Download PDF (One Page Per Farmer)';
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+
+</html>
