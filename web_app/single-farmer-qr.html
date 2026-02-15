@@ -311,21 +311,45 @@
                 const farmer = farmersData.find(f => f.id === farmerId);
                 const farmerName = farmer ? farmer.name : 'Unknown';
 
+                console.log('Looking for equipment for:', {
+                    farmerId,
+                    farmerName,
+                    farmerData: farmer
+                });
+
                 // Load unloading records - try matching by both farmer_id AND farmer_name
                 // Some records might use farmer_id, others might use farmer_name
                 const snapshot = await getDocs(collection(db, 'unloading_records'));
 
+                console.log('Total unloading records:', snapshot.size);
+
                 currentEquipment = [];
+                let matchedRecords = 0;
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
                     // Check if this record belongs to the selected farmer
-                    // Match by farmer_id OR farmer_name
+                    // Match by farmer_id OR farmer_name (case-insensitive, trimmed)
+                    const recordFarmerName = (data.farmer_name || '').trim();
+                    const searchFarmerName = (farmerName || '').trim();
+
                     const belongsToFarmer =
                         data.farmer_id === farmerId ||
-                        data.farmer_name === farmerName ||
-                        data.farmer_name === farmer?.name;
+                        recordFarmerName.toLowerCase() === searchFarmerName.toLowerCase();
+
+                    if (belongsToFarmer) {
+                        matchedRecords++;
+                        console.log('Matched record:', {
+                            docId: doc.id,
+                            farmer_id: data.farmer_id,
+                            farmer_name: data.farmer_name,
+                            controller: data.controller_qr,
+                            pump: data.pump_qr,
+                            panels: data.panel_serials,
+                            motor: data.motor_serial
+                        });
+                    }
 
                     if (!belongsToFarmer) return;
 
@@ -362,6 +386,9 @@
                     }
                 });
 
+                console.log('Matched records:', matchedRecords);
+                console.log('Total equipment found:', currentEquipment.length);
+
                 // Show equipment info
                 const infoBox = document.getElementById('equipmentInfo');
                 const equipmentList = document.getElementById('equipmentList');
@@ -374,7 +401,7 @@
                     // Generate preview
                     generatePreview();
                 } else {
-                    equipmentList.innerHTML = '❌ No equipment found for this farmer';
+                    equipmentList.innerHTML = `❌ No equipment found for this farmer<br><small style="color: #999;">Searched ${matchedRecords} record(s). Check browser console (F12) for details.</small>`;
                     infoBox.style.display = 'block';
                     document.getElementById('generateBtn').disabled = true;
                     document.getElementById('previewArea').style.display = 'none';
