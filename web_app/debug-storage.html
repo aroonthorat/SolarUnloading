@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>🔍 Storage Upload Debugger</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Firebase Storage Upload Debugger</h1>
+
+    <div class="card">
+        <h2>Step 1: Check Authentication</h2>
+        <button onclick="checkAuth()">🔐 Check Auth Status</button>
+        <div id="authResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 2: Test Small File Upload</h2>
+        <button onclick="testSmallUpload()">📤 Test Small File (1KB)</button>
+        <div id="smallUploadResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 3: Test Real Image Upload</h2>
+        <input type="file" id="testFile" accept="image/*">
+        <button onclick="testRealUpload()">📷 Test Real File Upload</button>
+        <div id="realUploadResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 4: Check Storage Configuration</h2>
+        <button onclick="checkConfig()">⚙️ Check Firebase Config</button>
+        <div id="configResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Debug Log</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getStorage, ref, uploadString, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRYoZT9c4O0flc39iROdgC1bTQkUXq88",
+            authDomain: "gen-lang-client-0579320558.firebaseapp.com",
+            projectId: "gen-lang-client-0579320558",
+            storageBucket: "gen-lang-client-0579320558.firebasestorage.app",
+            messagingSenderId: "770401014858",
+            appId: "1:770401014858:web:placeholder"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const storage = getStorage(app);
+
+        let logDiv = document.getElementById('log');
+        function log(msg, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = {
+                'info': '#0ff',
+                'success': '#0f0',
+                'error': '#f00',
+                'warning': '#ff0'
+            }[type] || '#0f0';
+            logDiv.innerHTML += `<div style="color:${color}">[${timestamp}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        window.checkAuth = async () => {
+            const result = document.getElementById('authResult');
+            log('Checking authentication status...');
+
+            try {
+                const user = auth.currentUser;
+
+                if (user) {
+                    result.innerHTML = `
+                        <div class="status success">
+                            ✅ User is authenticated
+                            <pre>Email: ${user.email}
+UID: ${user.uid}
+Email Verified: ${user.emailVerified}</pre>
+                        </div>
+                    `;
+                    log(`✅ User logged in: ${user.email}`, 'success');
+                } else {
+                    result.innerHTML = `
+                        <div class="status error">
+                            ❌ No user is logged in!
+                            <p>This is the problem! You need to be logged in to upload files.</p>
+                        </div>
+                        <button onclick="loginUser()">🔑 Login as test@example.com</button>
+                    `;
+                    log('❌ No user logged in - THIS IS THE PROBLEM!', 'error');
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+                log(`❌ Auth check error: ${error.message}`, 'error');
+            }
+        };
+
+        window.loginUser = async () => {
+            log('Attempting to login test user...');
+            try {
+                await signInWithEmailAndPassword(auth, 'test@example.com', 'test123');
+                log('✅ Login successful!', 'success');
+                checkAuth();
+            } catch (error) {
+                log(`❌ Login failed: ${error.message}`, 'error');
+                alert('Login failed: ' + error.message);
+            }
+        };
+
+        window.testSmallUpload = async () => {
+            const result = document.getElementById('smallUploadResult');
+            result.innerHTML = '<div class="status info">Testing...</div>';
+            log('Starting small file upload test...');
+
+            try {
+                if (!auth.currentUser) {
+                    throw new Error('Not authenticated! Please check auth first.');
+                }
+
+                const timestamp = Date.now();
+                const testPath = `uploads/2026/02/TEST_FARMER/test/test_${timestamp}.txt`;
+                log(`Upload path: ${testPath}`);
+
+                const storageRef = ref(storage, testPath);
+                log('Uploading test data...');
+
+                await uploadString(storageRef, 'Test data from debug tool', 'raw');
+
+                const url = await getDownloadURL(storageRef);
+                log(`✅ Upload successful! URL: ${url}`, 'success');
+
+                result.innerHTML = `
+                    <div class="status success">
+                        ✅ Small file upload SUCCESSFUL!
+                        <pre>Path: ${testPath}
+URL: ${url}</pre>
+                        <p><strong>Storage is working!</strong> The issue may be with file size or specific file type.</p>
+                    </div>
+                `;
+            } catch (error) {
+                log(`❌ Upload failed: ${error.code} - ${error.message}`, 'error');
+                result.innerHTML = `
+                    <div class="status error">
+                        ❌ Upload Failed
+                        <pre>Error Code: ${error.code}
+Error Message: ${error.message}
+Full Error: ${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.testRealUpload = async () => {
+            const fileInput = document.getElementById('testFile');
+            const result = document.getElementById('realUploadResult');
+
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('Please select a file first!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            log(`Testing real file upload: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+
+            result.innerHTML = '<div class="status info">Uploading real file...</div>';
+
+            try {
+                if (!auth.currentUser) {
+                    throw new Error('Not authenticated! Please check auth first.');
+                }
+
+                // Check file size
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    throw new Error(`File too large! ${(file.size / 1024 / 1024).toFixed(2)}MB (max 10MB)`);
+                }
+
+                const timestamp = Date.now();
+                const testPath = `uploads/2026/02/TEST_FARMER/test/photo_${timestamp}.jpg`;
+                log(`Upload path: ${testPath}`);
+
+                const storageRef = ref(storage, testPath);
+                log('Starting upload...');
+
+                const snapshot = await uploadBytes(storageRef, file);
+                log('Upload complete, getting URL...');
+
+                const url = await getDownloadURL(storageRef);
+                log(`✅ Real file upload successful!`, 'success');
+
+                result.innerHTML = `
+                    <div class="status success">
+                        ✅ Real file upload SUCCESSFUL!
+                        <pre>File: ${file.name}
+Size: ${(file.size / 1024).toFixed(2)} KB
+Path: ${testPath}
+URL: ${url}</pre>
+                        <img src="${url}" style="max-width: 200px; border: 2px solid #0f0; margin-top: 10px;">
+                        <p><strong>Storage is working perfectly!</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                log(`❌ Real upload failed: ${error.code} - ${error.message}`, 'error');
+                result.innerHTML = `
+                    <div class="status error">
+                        ❌ Real Upload Failed
+                        <pre>Error Code: ${error.code}
+Error Message: ${error.message}
+File: ${file.name}
+Size: ${(file.size / 1024).toFixed(2)} KB
+Full Error: ${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.checkConfig = () => {
+            const result = document.getElementById('configResult');
+            log('Checking Firebase configuration...');
+
+            result.innerHTML = `
+                <div class="status info">
+                    <h3>Firebase Configuration</h3>
+                    <pre>${JSON.stringify(firebaseConfig, null, 2)}</pre>
+                    
+                    <h3>Auth Instance</h3>
+                    <pre>App Name: ${auth.app.name}
+Current User: ${auth.currentUser ? auth.currentUser.email : 'None'}</pre>
+                    
+                    <h3>Storage Instance</h3>
+                    <pre>Bucket: ${storage.app.options.storageBucket}
+Max Upload Size: ${storage.maxUploadRetryTime}ms
+Max Operation Retry Time: ${storage.maxOperationRetryTime}ms</pre>
+                </div>
+            `;
+            log('Config check complete');
+        };
+
+        // Auto-check auth on load
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                log(`User auto-detected: ${user.email}`, 'success');
+            } else {
+                log('No user logged in', 'warning');
+            }
+        });
+
+        log('🔍 Debug tool initialized. Start with Step 1: Check Authentication', 'info');
+    </script>
+</body>
+
+</html>
