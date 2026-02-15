@@ -192,6 +192,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
         import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         const firebaseConfig = {
@@ -204,13 +205,42 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
         let farmerEquipmentData = [];
+        let currentUser = null;
+
+        // Check authentication on page load
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('User logged in:', user.email);
+                document.getElementById('previewArea').innerHTML = '<div class="loading">✅ Authenticated. Click "Generate All Equipment QR Codes" to start</div>';
+            } else {
+                currentUser = null;
+                console.log('No user logged in');
+                document.getElementById('previewArea').innerHTML = `
+                    <div class="loading">
+                        <p style="color: #f44336; margin-bottom: 20px;">❌ You must be logged in to access this page</p>
+                        <p style="font-size: 14px; color: #666;">
+                            Please go to <a href="index.html" style="color: #667eea;">Login Page</a> and sign in first.
+                        </p>
+                    </div>
+                `;
+                document.getElementById('generateBtn').disabled = true;
+            }
+        });
 
         window.generateAllQRs = async () => {
             const previewArea = document.getElementById('previewArea');
             const generateBtn = document.getElementById('generateBtn');
+
+            // Check authentication
+            if (!currentUser) {
+                previewArea.innerHTML = '<div class="loading">❌ Please log in first to access unloading records</div>';
+                return;
+            }
 
             generateBtn.disabled = true;
             generateBtn.textContent = '⏳ Loading...';
