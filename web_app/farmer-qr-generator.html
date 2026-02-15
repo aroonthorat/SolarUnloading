@@ -158,8 +158,9 @@
 
 <body>
     <div class="container">
-        <h1>📱 Farmer QR Code Generator</h1>
-        <p class="subtitle">Generate QR codes for farmers to enable quick access to their profiles</p>
+        <h1>📱 QR Code Generator & Serial Number Archive</h1>
+        <p class="subtitle">Generate QR codes for farmers OR recreate QR codes from scanned serial numbers during
+            unloading</p>
 
         <div class="stats">
             <div class="stat-card">
@@ -184,10 +185,12 @@
                 <strong>Farmer Profiles</strong> - Generate QR codes for farmer profiles
             </label>
 
-            <label style="display: block; padding: 10px; background: #f0f0f0; margin: 5px 0; border-radius: 5px;">
+            <label
+                style="display: block; padding: 10px; background: #fff3cd; margin: 5px 0; border-radius: 5px; border: 2px solid #ffc107;">
                 <input type="radio" name="qrType" value="equipment" onchange="updateQRType()">
-                <strong>Scanned Equipment</strong> - Recreate QR codes for all scanned items (Controllers, Pumps,
-                Panels, Motors)
+                <strong>📦 Scanned Serial Numbers</strong> - Recreate QR codes for ALL serial numbers you already
+                scanned during unloading
+                <br><small style="color: #666; margin-left: 25px;">☑ Controllers • Pumps • Panels • Motors</small>
             </label>
 
             <div id="farmerOptions" style="margin-top: 15px;">
@@ -216,19 +219,26 @@
                 </label>
             </div>
 
-            <div id="equipmentOptions" style="margin-top: 15px; display: none;">
-                <h4>⚙️ Equipment Selection</h4>
-                <label>
-                    <input type="checkbox" id="includeControllers" checked> Controllers
+            <div id="equipmentOptions"
+                style="margin-top: 15px; display: none; background: #fffbf0; padding: 15px; border-radius: 8px; border: 1px solid #ffc107;">
+                <h4>⚙️ Select Which Serial Numbers to Recreate</h4>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">These are the serial numbers you scanned
+                    during unloading process:</p>
+                <label style="display: block; padding: 8px; margin: 5px 0;">
+                    <input type="checkbox" id="includeControllers" checked> <strong>Controller Serial Numbers</strong>
+                    (from controller_qr field)
                 </label>
-                <label>
-                    <input type="checkbox" id="includePumps" checked> Pumps
+                <label style="display: block; padding: 8px; margin: 5px 0;">
+                    <input type="checkbox" id="includePumps" checked> <strong>Pump Serial Numbers</strong> (from pump_qr
+                    field)
                 </label>
-                <label>
-                    <input type="checkbox" id="includePanels" checked> Panel Serials
+                <label style="display: block; padding: 8px; margin: 5px 0;">
+                    <input type="checkbox" id="includePanels" checked> <strong>Panel Serial Numbers</strong> (from
+                    panel_serials array)
                 </label>
-                <label>
-                    <input type="checkbox" id="includeMotors" checked> Motors
+                <label style="display: block; padding: 8px; margin: 5px 0;">
+                    <input type="checkbox" id="includeMotors" checked> <strong>Motor Serial Numbers</strong> (from
+                    motor_serial field)
                 </label>
             </div>
 
