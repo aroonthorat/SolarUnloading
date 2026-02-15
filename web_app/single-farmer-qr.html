@@ -52,6 +52,22 @@
             font-size: 14px;
         }
 
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
         select {
             width: 100%;
             padding: 12px;
@@ -61,6 +77,7 @@
             background: white;
             cursor: pointer;
             transition: all 0.3s;
+            max-height: 300px;
         }
 
         select:focus {
@@ -164,8 +181,11 @@
         </p>
 
         <div class="form-group">
-            <label for="farmerSelect">👤 Select Farmer:</label>
-            <select id="farmerSelect">
+            <label for="farmerSearch">🔍 Search Farmer:</label>
+            <input type="text" id="farmerSearch" placeholder="Type farmer name to search..." oninput="filterFarmers()">
+
+            <label for="farmerSelect" style="margin-top: 15px;">👤 Select Farmer:</label>
+            <select id="farmerSelect" size="8">
                 <option value="">-- Loading farmers... --</option>
             </select>
         </div>
@@ -253,6 +273,37 @@
                 alert('Error loading farmers: ' + error.message);
             }
         }
+
+        // Filter farmers based on search input
+        window.filterFarmers = function () {
+            const searchText = document.getElementById('farmerSearch').value.toLowerCase();
+            const select = document.getElementById('farmerSelect');
+
+            // Clear current options except first
+            select.innerHTML = '<option value="">-- Select a farmer --</option>';
+
+            // Filter and add matching farmers
+            const filtered = farmersData.filter(farmer =>
+                (farmer.name || '').toLowerCase().includes(searchText)
+            );
+
+            filtered.forEach(farmer => {
+                const option = document.createElement('option');
+                option.value = farmer.id;
+                option.textContent = farmer.name || 'Unknown';
+                select.appendChild(option);
+            });
+
+            // Show count
+            if (searchText && filtered.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- No farmers found --';
+                option.disabled = true;
+                select.appendChild(option);
+            }
+        };
+
 
         async function loadFarmerEquipment(farmerId) {
             try {
