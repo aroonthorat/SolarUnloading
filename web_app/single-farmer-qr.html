@@ -508,37 +508,59 @@
                 doc.setDrawColor(200);
                 doc.line(margin, margin + 25, pageWidth - margin, margin + 25);
 
-                // Layout QR codes
+                // Pagination setup
                 const qrSize = 55;
                 const cols = 3;
-                const gap = 8;
+                const xGap = 12; // Adjusted for better spacing
+                const yGap = 25; // Space between rows including labels
                 const startY = margin + 35;
+                const itemWidth = qrSize;
+                const itemHeight = qrSize + 20; // Height of QR + text labels
+                // pageHeight is already defined above
+
+                let currentCol = 0;
+                let currentRow = 0;
+                let yPosition = startY;
 
                 const qrItems = document.querySelectorAll('.qr-item canvas');
 
                 currentEquipment.forEach((item, index) => {
-                    const col = index % cols;
-                    const row = Math.floor(index / cols);
+                    // Calculate position
+                    let x = margin + (currentCol * (itemWidth + xGap));
 
-                    const x = margin + (col * (qrSize + gap + 5));
-                    const y = startY + (row * (qrSize + gap + 15));
+                    // Check if we need a new page
+                    if (yPosition + itemHeight > pageHeight - margin) {
+                        doc.addPage();
+                        yPosition = margin + 20; // New page start Y
+                        currentCol = 0;
+                        currentRow = 0;
+                        x = margin; // Reset X
+                    }
 
                     const canvas = qrItems[index];
 
                     if (canvas) {
                         const imgData = canvas.toDataURL('image/png');
-                        doc.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+                        doc.addImage(imgData, 'PNG', x, yPosition, qrSize, qrSize);
 
                         // Add labels
                         doc.setFontSize(9);
                         doc.setTextColor(0);
                         doc.setFont(undefined, 'bold');
-                        doc.text(item.type, x + qrSize / 2, y + qrSize + 4, { align: 'center', maxWidth: qrSize });
+                        doc.text(item.type, x + qrSize / 2, yPosition + qrSize + 5, { align: 'center', maxWidth: qrSize });
 
                         doc.setFontSize(7);
                         doc.setFont(undefined, 'normal');
                         const serialLines = doc.splitTextToSize(item.serial, qrSize);
-                        doc.text(serialLines, x + qrSize / 2, y + qrSize + 9, { align: 'center' });
+                        doc.text(serialLines, x + qrSize / 2, yPosition + qrSize + 10, { align: 'center' });
+                    }
+
+                    // Advance column
+                    currentCol++;
+                    if (currentCol >= cols) {
+                        currentCol = 0;
+                        currentRow++;
+                        yPosition += itemHeight + yGap;
                     }
                 });
 
