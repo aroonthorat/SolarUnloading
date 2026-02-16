@@ -354,8 +354,16 @@
 
                     if (!belongsToFarmer) return;
 
+                    // Helper to safely get string
+                    const getString = (val) => {
+                        if (!val) return null;
+                        if (typeof val === 'string') return val;
+                        if (typeof val === 'object') return val.serial || val.qr || val.id || JSON.stringify(val);
+                        return String(val);
+                    };
+
                     // Check for controller - try multiple field names
-                    const controllerQR = data.controller_qr || data.controllerQr || data.controller || data.Controller;
+                    const controllerQR = getString(data.controller_qr || data.controllerQr || data.controller || data.Controller);
                     if (controllerQR) {
                         currentEquipment.push({
                             type: 'Controller',
@@ -364,7 +372,7 @@
                     }
 
                     // Check for pump - try multiple field names
-                    const pumpQR = data.pump_qr || data.pumpQr || data.pump || data.Pump;
+                    const pumpQR = getString(data.pump_qr || data.pumpQr || data.pump || data.Pump);
                     if (pumpQR) {
                         currentEquipment.push({
                             type: 'Pump',
@@ -373,7 +381,7 @@
                     }
 
                     // Check for motor - try multiple field names
-                    const motorSerial = data.motor_serial || data.motorSerial || data.motor || data.Motor;
+                    const motorSerial = getString(data.motor_serial || data.motorSerial || data.motor || data.Motor);
                     if (motorSerial) {
                         currentEquipment.push({
                             type: 'Motor',
@@ -385,10 +393,11 @@
                     const panelSerials = data.panel_serials || data.panelSerials || data.panels || data.Panels;
                     if (panelSerials && Array.isArray(panelSerials)) {
                         panelSerials.forEach((serial, index) => {
-                            if (serial) {
+                            const serialStr = getString(serial);
+                            if (serialStr) {
                                 currentEquipment.push({
                                     type: `Panel #${index + 1}`,
-                                    serial: serial
+                                    serial: serialStr
                                 });
                             }
                         });
