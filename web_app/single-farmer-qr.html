@@ -426,12 +426,17 @@
             const qrContainer = document.getElementById('qrContainer');
             qrContainer.innerHTML = '';
 
-            currentEquipment.forEach(item => {
+            console.log('🎨 Generating preview for equipment:', currentEquipment);
+
+            currentEquipment.forEach((item, index) => {
+                console.log(`📱 Creating QR #${index + 1}:`, item.type, '=', item.serial);
+
                 const qrItem = document.createElement('div');
                 qrItem.className = 'qr-item';
 
                 const qrDiv = document.createElement('div');
                 qrDiv.style.display = 'inline-block';
+                qrDiv.id = `qr-${index}`; // Add unique ID
 
                 new QRCode(qrDiv, {
                     text: item.serial,
@@ -458,6 +463,7 @@
             });
 
             document.getElementById('previewArea').style.display = 'block';
+            console.log('✅ Preview generated with', currentEquipment.length, 'QR codes');
         }
 
         window.generateAndDownloadPDF = async () => {
