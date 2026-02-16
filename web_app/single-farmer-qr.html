@@ -307,13 +307,15 @@
 
         async function loadFarmerEquipment(farmerId) {
             try {
-                // Find farmer name
+                // Find farmer details
                 const farmer = farmersData.find(f => f.id === farmerId);
                 const farmerName = farmer ? farmer.name : 'Unknown';
+                const farmerBenId = farmer ? farmer.beneficiary_id : null;
 
                 console.log('Looking for equipment for:', {
                     farmerId,
                     farmerName,
+                    farmerBenId,
                     farmerData: farmer
                 });
 
@@ -329,53 +331,60 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
 
-                    // Check if this record belongs to the selected farmer
-                    // Match by farmer_id OR farmer_name (case-insensitive, trimmed)
-                    const recordFarmerName = (data.farmer_name || '').trim();
+                    // Try multiple matching strategies
+                    const recordFarmerName = (data.farmer_name || data.farmerName || '').trim();
                     const searchFarmerName = (farmerName || '').trim();
+                    const recordBenId = data.beneficiary_id || data.ben_id || data.benId;
 
                     const belongsToFarmer =
                         data.farmer_id === farmerId ||
-                        recordFarmerName.toLowerCase() === searchFarmerName.toLowerCase();
+                        recordFarmerName.toLowerCase() === searchFarmerName.toLowerCase() ||
+                        (farmerBenId && recordBenId && recordBenId === farmerBenId);
 
                     if (belongsToFarmer) {
                         matchedRecords++;
-                        console.log('Matched record:', {
+                        console.log('✅ Matched record:', {
                             docId: doc.id,
                             farmer_id: data.farmer_id,
                             farmer_name: data.farmer_name,
-                            controller: data.controller_qr,
-                            pump: data.pump_qr,
-                            panels: data.panel_serials,
-                            motor: data.motor_serial
+                            ben_id: recordBenId,
+                            allFields: Object.keys(data)
                         });
                     }
 
                     if (!belongsToFarmer) return;
 
-                    if (data.controller_qr) {
+                    // Check for controller - try multiple field names
+                    const controllerQR = data.controller_qr || data.controllerQr || data.controller || data.Controller;
+                    if (controllerQR) {
                         currentEquipment.push({
                             type: 'Controller',
-                            serial: data.controller_qr
+                            serial: controllerQR
                         });
                     }
 
-                    if (data.pump_qr) {
+                    // Check for pump - try multiple field names
+                    const pumpQR = data.pump_qr || data.pumpQr || data.pump || data.Pump;
+                    if (pumpQR) {
                         currentEquipment.push({
                             type: 'Pump',
-                            serial: data.pump_qr
+                            serial: pumpQR
                         });
                     }
 
-                    if (data.motor_serial) {
+                    // Check for motor - try multiple field names
+                    const motorSerial = data.motor_serial || data.motorSerial || data.motor || data.Motor;
+                    if (motorSerial) {
                         currentEquipment.push({
                             type: 'Motor',
-                            serial: data.motor_serial
+                            serial: motorSerial
                         });
                     }
 
-                    if (data.panel_serials && Array.isArray(data.panel_serials)) {
-                        data.panel_serials.forEach((serial, index) => {
+                    // Check for panels - try multiple field names
+                    const panelSerials = data.panel_serials || data.panelSerials || data.panels || data.Panels;
+                    if (panelSerials && Array.isArray(panelSerials)) {
+                        panelSerials.forEach((serial, index) => {
                             if (serial) {
                                 currentEquipment.push({
                                     type: `Panel #${index + 1}`,
